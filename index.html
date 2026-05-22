@@ -632,24 +632,39 @@ function renderBoards() {
     card.style.zIndex = "10";
     card.addEventListener('mousedown', (e) => startDrag(e, "note-"+rec.id));
     card.addEventListener('touchstart', (e) => startDrag(e, "note-"+rec.id), { passive:false });
-    let sizeBtns = "";
+    const headerBg = isFact ? 'bg-blue-100/70' : 'bg-amber-100/70';
+    const headerBorder = isFact ? 'border-blue-200/50' : 'border-amber-200/50';
+    let sizeBtnsHtml = '';
     FONT_ORDER.forEach(sz => {
-      sizeBtns += '<button type="button" class="size-btn ' + (sz===fontSize?'active':'') + '" data-size="' + sz + '" onclick="setNoteFontSize(\\'' + rec.id + '\\',\\'' + sz + '\\')" title="文字サイズ ' + FONT_LABEL[sz] + '">' + FONT_LABEL[sz] + '</button>';
+      const activeClass = sz === fontSize ? 'active' : '';
+      sizeBtnsHtml += '<button type="button" class="size-btn ' + activeClass + '" data-size="' + sz + '" title="文字サイズ ' + FONT_LABEL[sz] + '">' + FONT_LABEL[sz] + '</button>';
     });
     card.innerHTML =
-      '<div class="h-7 ' + (isFact?'bg-blue-100/70':'bg-amber-100/70') + ' border-b ' + (isFact?'border-blue-200/50':'border-amber-200/50') + ' flex items-center justify-between px-2 cursor-grab active:cursor-grabbing select-none flex-shrink-0 rounded-t-2xl">' +
-        '<div class="flex items-center gap-1 size-btn-group">' + sizeBtns + '</div>' +
+      '<div class="note-header h-7 ' + headerBg + ' border-b ' + headerBorder + ' flex items-center justify-between px-2 cursor-grab active:cursor-grabbing select-none flex-shrink-0 rounded-t-2xl">' +
+        '<div class="flex items-center gap-1 size-btn-group">' + sizeBtnsHtml + '</div>' +
         '<div class="flex items-center gap-0.5 sticky-action-buttons select-none">' +
-          '<button onclick="openEditRecord(\\'' + rec.id + '\\')" title="編集" class="text-slate-500 hover:text-slate-800 p-1 rounded transition"><i class="fa-solid fa-pen text-xs"></i></button>' +
-          '<button onclick="deleteRecordWithConfirm(\\'' + rec.id + '\\')" title="削除" class="text-slate-500 hover:text-red-600 p-1 rounded transition"><i class="fa-solid fa-trash-can text-xs"></i></button>' +
+          '<button type="button" data-action="edit" title="編集" class="text-slate-500 hover:text-slate-800 p-1 rounded transition"><i class="fa-solid fa-pen text-xs"></i></button>' +
+          '<button type="button" data-action="delete" title="削除" class="text-slate-500 hover:text-red-600 p-1 rounded transition"><i class="fa-solid fa-trash-can text-xs"></i></button>' +
         '</div>' +
       '</div>' +
       '<div class="px-3 py-2.5 flex-grow overflow-hidden flex">' +
         '<p class="note-content handwritten font-medium whitespace-pre-wrap flex-grow overflow-y-auto pr-1 fs-' + fontSize + '">' + escapeHtml(rec.content || "") + '</p>' +
       '</div>' +
-      '<div class="resize-handle absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 z-30 select-none" onmousedown="startResize(event, \\'note-' + rec.id + '\\')" ontouchstart="startResize(event, \\'note-' + rec.id + '\\')">' +
+      '<div class="resize-handle absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 z-30 select-none">' +
         '<svg class="w-3 h-3 text-slate-400 pointer-events-none" viewBox="0 0 10 10" fill="none"><line x1="2" y1="8" x2="8" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="8" x2="8" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
       '</div>';
+    card.querySelectorAll('.size-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); setNoteFontSize(rec.id, btn.dataset.size); });
+    });
+    const editBtn = card.querySelector('[data-action="edit"]');
+    if (editBtn) editBtn.addEventListener('click', (e) => { e.stopPropagation(); openEditRecord(rec.id); });
+    const delBtn = card.querySelector('[data-action="delete"]');
+    if (delBtn) delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteRecordWithConfirm(rec.id); });
+    const rh = card.querySelector('.resize-handle');
+    if (rh) {
+      rh.addEventListener('mousedown', (e) => startResize(e, "note-"+rec.id));
+      rh.addEventListener('touchstart', (e) => startResize(e, "note-"+rec.id), { passive: false });
+    }
     board.appendChild(card);
   });
   updateStats();
