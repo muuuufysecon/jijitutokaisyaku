@@ -7,6 +7,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #f1f5f9; margin: 0; overflow: hidden; font-family: -apple-system, 'Yu Gothic', sans-serif; }
+        header { height: 60px; background:#fff; border-bottom:1px solid #e2e8f0; padding:0 16px; display:flex; align-items:center; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
+        header h1 { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0; }
+        header input { border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-size:14px; }
+        header button { padding:4px 12px; border-radius:4px; font-size:14px; font-weight:600; border:none; cursor:pointer; }
+        #joinBtn { background:#2563eb; color:#fff; }
+        #joinBtn:hover { background:#1d4ed8; }
+        #addBtn { background:#facc15; color:#1e293b; }
+        #addBtn:hover { background:#eab308; }
+        #addBtn:disabled { opacity:0.5; cursor:not-allowed; }
+        .spacer { margin-left:auto; display:flex; align-items:center; gap:12px; }
+        #status { font-size: 12px; color:#64748b; }
+        #userCount { font-size: 12px; background:#f1f5f9; padding:4px 8px; border-radius:4px; }
+        #errorBox { position:fixed; top:70px; left:50%; transform:translateX(-50%); background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-size:13px; max-width:90%; display:none; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
         #board {
             position: relative;
             width: 100vw;
@@ -38,6 +51,7 @@
             font-size: 14px;
             cursor: text;
             min-height: 100px;
+            font-family: inherit;
         }
         .sticky .toolbar {
             display: flex;
@@ -47,13 +61,12 @@
             font-size: 11px;
             color: #475569;
         }
-        .delete-btn {
+        .delete-btn, .color-picker {
             cursor: pointer;
-            color: #ef4444;
-            font-weight: bold;
             user-select: none;
             padding: 0 4px;
         }
+        .delete-btn { color: #ef4444; font-weight: bold; }
         .delete-btn:hover { color: #b91c1c; }
         .color-yellow { background: #fef08a; }
         .color-pink   { background: #fbcfe8; }
@@ -63,34 +76,58 @@
     </style>
 </head>
 <body>
-    <header class="h-[60px] bg-white border-b border-slate-200 px-4 flex items-center gap-3 shadow-sm">
-        <h1 class="text-lg font-bold text-slate-800">📝 共同付箋ボード</h1>
-        <div class="flex items-center gap-2 ml-4">
-            <label class="text-sm text-slate-600">ルーム名:</label>
-            <input id="roomInput" type="text" class="border border-slate-300 rounded px-2 py-1 text-sm" placeholder="例: kirari-team" />
-            <button id="joinBtn" class="px-3 py-1 bg-blue-600 text-white rounded text-sm font-semibold hover:bg-blue-700">参加</button>
-        </div>
-        <div class="ml-auto flex items-center gap-3">
-            <span id="status" class="text-xs text-slate-500">未接続</span>
-            <span id="userCount" class="text-xs bg-slate-100 px-2 py-1 rounded">👥 0人</span>
-            <button id="addBtn" class="px-3 py-1 bg-yellow-400 text-slate-800 rounded text-sm font-semibold hover:bg-yellow-500 disabled:opacity-50" disabled>＋ 付箋を追加</button>
+    <header>
+        <h1>📝 共同付箋ボード</h1>
+        <label style="font-size:14px;color:#475569;margin-left:8px;">ルーム名:</label>
+        <input id="roomInput" type="text" placeholder="例: kirari-team" />
+        <button id="joinBtn">参加</button>
+        <div class="spacer">
+            <span id="status">読み込み中...</span>
+            <span id="userCount">👥 0人</span>
+            <button id="addBtn" disabled>＋ 付箋を追加</button>
         </div>
     </header>
+    <div id="errorBox"></div>
     <div id="board"></div>
 
+    <script>
+        // エラーを画面に表示
+        const errorBox = document.getElementById('errorBox');
+        function showError(msg) {
+            errorBox.textContent = '⚠️ ' + msg;
+            errorBox.style.display = 'block';
+            console.error(msg);
+        }
+        window.addEventListener('error', e => showError('エラー: ' + (e.message || e.error)));
+        window.addEventListener('unhandledrejection', e => showError('エラー: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
+    </script>
+
     <script type="module">
-        import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.18/+esm';
-        import { WebrtcProvider } from 'https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/+esm';
+        // esm.sh は Node ポリフィルを自動で処理するため y-webrtc も安定して動く
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = '📦 ライブラリ読み込み中...';
+
+        let Y, WebrtcProvider;
+        try {
+            const yjs = await import('https://esm.sh/yjs@13.6.18');
+            Y = yjs;
+            const ywebrtc = await import('https://esm.sh/y-webrtc@10.3.0?deps=yjs@13.6.18');
+            WebrtcProvider = ywebrtc.WebrtcProvider;
+        } catch (err) {
+            showError('ライブラリ読み込み失敗: ' + err.message);
+            throw err;
+        }
 
         const board       = document.getElementById('board');
         const roomInput   = document.getElementById('roomInput');
         const joinBtn     = document.getElementById('joinBtn');
         const addBtn      = document.getElementById('addBtn');
-        const statusEl    = document.getElementById('status');
         const userCountEl = document.getElementById('userCount');
 
         const colors = ['color-yellow', 'color-pink', 'color-blue', 'color-green', 'color-orange'];
         let ydoc = null, provider = null, yNotes = null;
+
+        statusEl.textContent = '↑ ルーム名を入れて「参加」を押してください';
 
         function uid() {
             return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -103,26 +140,29 @@
             if (ydoc) ydoc.destroy();
             board.innerHTML = '';
 
-            ydoc = new Y.Doc();
-            yNotes = ydoc.getMap('notes');
-            // ルーム名をパスワードにして、同名ルームの参加者だけが内容を共有できる
-            provider = new WebrtcProvider('sticky-' + room, ydoc, {
-                signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com'],
-                password: room
-            });
+            try {
+                ydoc = new Y.Doc();
+                yNotes = ydoc.getMap('notes');
+                provider = new WebrtcProvider('sticky-' + room, ydoc, {
+                    signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com'],
+                    password: room
+                });
 
-            provider.on('status', e => {
-                statusEl.textContent = e.connected ? '✅ ルーム「' + room + '」に接続中' : '🔄 接続待機中';
-            });
-            provider.awareness.on('change', () => {
-                const n = provider.awareness.getStates().size;
-                userCountEl.textContent = '👥 ' + n + '人';
-            });
+                provider.on('status', e => {
+                    statusEl.textContent = e.connected ? '✅ ルーム「' + room + '」接続中' : '🔄 接続待機中';
+                });
+                provider.awareness.on('change', () => {
+                    const n = provider.awareness.getStates().size;
+                    userCountEl.textContent = '👥 ' + n + '人';
+                });
 
-            yNotes.observeDeep(() => render());
-            addBtn.disabled = false;
-            statusEl.textContent = '✅ ルーム「' + room + '」に参加';
-            render();
+                yNotes.observeDeep(() => render());
+                addBtn.disabled = false;
+                statusEl.textContent = '✅ ルーム「' + room + '」に参加';
+                render();
+            } catch (err) {
+                showError('接続エラー: ' + err.message);
+            }
         }
 
         function addNote() {
@@ -138,11 +178,9 @@
         function render() {
             const liveIds = new Set();
             yNotes.forEach((_, id) => liveIds.add(id));
-            // 削除されたノートのDOMを撤去
             Array.from(board.children).forEach(el => {
                 if (!liveIds.has(el.dataset.id)) el.remove();
             });
-            // 追加・更新
             yNotes.forEach((note, id) => {
                 let el = board.querySelector('[data-id="' + id + '"]');
                 if (!el) el = createStickyEl(id, note);
@@ -157,15 +195,13 @@
             el.innerHTML =
                 '<textarea placeholder="メモを入力..."></textarea>' +
                 '<div class="toolbar">' +
-                '  <span class="color-picker" title="色を変更" style="cursor:pointer">🎨</span>' +
+                '  <span class="color-picker" title="色を変更">🎨</span>' +
                 '  <span class="delete-btn" title="削除">✕</span>' +
                 '</div>';
             board.appendChild(el);
 
             const textarea = el.querySelector('textarea');
-            textarea.addEventListener('input', () => {
-                note.set('text', textarea.value);
-            });
+            textarea.addEventListener('input', () => note.set('text', textarea.value));
 
             el.querySelector('.delete-btn').addEventListener('click', e => {
                 e.stopPropagation();
@@ -179,17 +215,18 @@
                 note.set('color', colors[(idx + 1) % colors.length]);
             });
 
-            // ドラッグ移動
             let dragging = false, offsetX = 0, offsetY = 0;
-            el.addEventListener('mousedown', e => {
-                if (e.target.tagName === 'TEXTAREA') return;
-                if (e.target.classList.contains('delete-btn')) return;
-                if (e.target.classList.contains('color-picker')) return;
+            const onDown = (clientX, clientY, target) => {
+                if (target.tagName === 'TEXTAREA') return false;
+                if (target.classList.contains('delete-btn')) return false;
+                if (target.classList.contains('color-picker')) return false;
                 dragging = true;
-                offsetX = e.clientX - el.offsetLeft;
-                offsetY = e.clientY - el.offsetTop;
+                offsetX = clientX - el.offsetLeft;
+                offsetY = clientY - el.offsetTop;
                 el.style.zIndex = 1000;
-            });
+                return true;
+            };
+            el.addEventListener('mousedown', e => onDown(e.clientX, e.clientY, e.target));
             document.addEventListener('mousemove', e => {
                 if (!dragging) return;
                 note.set('x', e.clientX - offsetX);
@@ -198,16 +235,10 @@
             document.addEventListener('mouseup', () => {
                 if (dragging) { dragging = false; el.style.zIndex = ''; }
             });
-
-            // タッチ対応
             el.addEventListener('touchstart', e => {
-                if (e.target.tagName === 'TEXTAREA') return;
                 const t = e.touches[0];
-                dragging = true;
-                offsetX = t.clientX - el.offsetLeft;
-                offsetY = t.clientY - el.offsetTop;
-                el.style.zIndex = 1000;
-            });
+                if (onDown(t.clientX, t.clientY, e.target)) e.preventDefault();
+            }, { passive: false });
             document.addEventListener('touchmove', e => {
                 if (!dragging) return;
                 const t = e.touches[0];
@@ -231,11 +262,11 @@
             const newText = note.get('text') || '';
             if (textarea && textarea.value !== newText) {
                 const focused = document.activeElement === textarea;
-                const s = textarea.selectionStart, e = textarea.selectionEnd;
+                const s = textarea.selectionStart, e2 = textarea.selectionEnd;
                 textarea.value = newText;
                 if (focused) {
                     textarea.focus();
-                    try { textarea.setSelectionRange(s, e); } catch(_) {}
+                    try { textarea.setSelectionRange(s, e2); } catch(_) {}
                 }
             }
         }
@@ -243,9 +274,6 @@
         joinBtn.addEventListener('click', join);
         addBtn.addEventListener('click', addNote);
         roomInput.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
-
-        // 初期メッセージ
-        statusEl.textContent = '↑ ルーム名を入れて「参加」を押してください';
     </script>
 </body>
 </html>
