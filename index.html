@@ -1,333 +1,925 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>共同付箋ボード</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #f1f5f9; margin: 0; overflow: hidden; font-family: -apple-system, 'Yu Gothic', sans-serif; }
-        header { height: 60px; background:#fff; border-bottom:1px solid #e2e8f0; padding:0 16px; display:flex; align-items:center; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.05); }
-        header h1 { font-size: 18px; font-weight: 700; color: #1e293b; margin: 0; }
-        header input { border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-size:14px; }
-        header button { padding:4px 12px; border-radius:4px; font-size:14px; font-weight:600; border:none; cursor:pointer; }
-        #joinBtn { background:#2563eb; color:#fff; }
-        #joinBtn:hover { background:#1d4ed8; }
-        #addBtn { background:#facc15; color:#1e293b; }
-        #addBtn:hover { background:#eab308; }
-        #addBtn:disabled { opacity:0.5; cursor:not-allowed; }
-        .spacer { margin-left:auto; display:flex; align-items:center; gap:12px; }
-        #status { font-size: 12px; color:#64748b; }
-        #userCount { font-size: 12px; background:#f1f5f9; padding:4px 8px; border-radius:4px; }
-        #errorBox { position:fixed; top:70px; left:50%; transform:translateX(-50%); background:#fee2e2; color:#991b1b; padding:8px 16px; border-radius:6px; font-size:13px; max-width:90%; display:none; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-        #board {
-            position: relative;
-            width: 100vw;
-            height: calc(100vh - 60px);
-            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 24px 24px;
-            overflow: hidden;
-        }
-        .sticky {
-            position: absolute;
-            width: 200px;
-            min-height: 160px;
-            padding: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 4px;
-            cursor: move;
-            display: flex;
-            flex-direction: column;
-            transform: rotate(-1deg);
-            transition: box-shadow 0.15s;
-        }
-        .sticky:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.22); }
-        .sticky textarea {
-            flex: 1;
-            background: transparent;
-            border: none;
-            resize: none;
-            outline: none;
-            font-size: 14px;
-            cursor: text;
-            min-height: 100px;
-            font-family: inherit;
-        }
-        .sticky .toolbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 6px;
-            font-size: 11px;
-            color: #475569;
-        }
-        .delete-btn, .color-picker {
-            cursor: pointer;
-            user-select: none;
-            padding: 0 4px;
-        }
-        .delete-btn { color: #ef4444; font-weight: bold; }
-        .delete-btn:hover { color: #b91c1c; }
-        .color-yellow { background: #fef08a; }
-        .color-pink   { background: #fbcfe8; }
-        .color-blue   { background: #bfdbfe; }
-        .color-green  { background: #bbf7d0; }
-        .color-orange { background: #fed7aa; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>事実と解釈の自由配置ボード - Observation Board</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=Yomogi&display=swap" rel="stylesheet">
+<style>
+body {
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
+  background-color: #f7fee7;
+  background-image: radial-gradient(#e2f5d3 1px, transparent 1px);
+  background-size: 20px 20px;
+  user-select: none;
+}
+.handwritten { font-family: 'Yomogi', 'Noto Sans JP', sans-serif; }
+.sticky-note {
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+  box-shadow: 3px 6px 15px rgba(0, 0, 0, 0.08);
+  cursor: grab;
+  touch-action: none;
+}
+.sticky-note:active {
+  cursor: grabbing;
+  transform: scale(1.02) rotate(0.5deg) !important;
+  box-shadow: 8px 16px 28px rgba(0, 0, 0, 0.15);
+  z-index: 100 !important;
+}
+.board-canvas {
+  min-height: 700px;
+  background-color: #ffffff;
+  background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  position: relative;
+}
+.board-canvas:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  background-color: #ffffff;
+  background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  overflow: auto;
+  padding: 24px;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.02); }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+</style>
 </head>
-<body>
-    <header>
-        <h1>📝 共同付箋ボード</h1>
-        <label style="font-size:14px;color:#475569;margin-left:8px;">ルーム名:</label>
-        <input id="roomInput" type="text" placeholder="例: kirari-team" />
-        <button id="joinBtn">参加</button>
-        <div class="spacer">
-            <span id="status">読み込み中...</span>
-            <span id="userCount">👥 0人</span>
-            <button id="addBtn" disabled>＋ 付箋を追加</button>
+<body class="min-h-screen flex flex-col">
+
+<header class="bg-white border-b border-lime-100 shadow-sm sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row justify-between items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-lime-500 text-white p-2 rounded-2xl shadow-md shadow-lime-200">
+        <i class="fa-solid fa-note-sticky text-2xl"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+          事実と解釈の自由配置ボード
+          <span class="text-xs font-normal bg-lime-100 text-lime-700 px-2.5 py-1 rounded-full">観察ナレッジ</span>
+        </h1>
+        <p class="text-xs text-slate-500 mt-0.5">児童生徒のありのままの事実と指導員の解釈を1枚の付箋にして自由に動かす</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button onclick="openRecordModal()" class="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition shadow-md shadow-lime-100">
+        <i class="fa-solid fa-circle-plus"></i><span>新規記録を追加</span>
+      </button>
+      <button onclick="openStudentModal()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
+        <i class="fa-solid fa-users text-lime-600"></i><span>名簿管理</span>
+      </button>
+      <button onclick="exportCSV()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
+        <i class="fa-solid fa-file-csv text-emerald-600"></i><span>CSV出力</span>
+      </button>
+      <button onclick="openBackupModal()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
+        <i class="fa-solid fa-database text-indigo-600"></i><span>データ移行</span>
+      </button>
+      <button onclick="clearAllDataWithConfirm()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-medium transition">
+        <i class="fa-solid fa-trash-can"></i><span>全消去</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+  <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+        <div class="relative flex-grow md:flex-grow-0 md:w-64">
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <i class="fa-solid fa-magnifying-glass text-sm"></i>
+          </span>
+          <input type="text" id="filterSearch" oninput="applyFilters()" placeholder="キーワードで検索..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 focus:bg-white transition">
         </div>
-    </header>
-    <div id="errorBox"></div>
-    <div id="board"></div>
+        <div class="w-full sm:w-44">
+          <select id="filterStudent" onchange="applyFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 focus:bg-white transition">
+            <option value="">すべての児童生徒</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-4 text-xs font-semibold text-slate-500">
+        <span class="bg-slate-100 px-3 py-1.5 rounded-lg">登録総数: <strong id="statsCount" class="text-slate-800 text-sm">0</strong> 件</span>
+      </div>
+    </div>
+  </section>
 
-    <script>
-        // エラーを画面に表示
-        const errorBox = document.getElementById('errorBox');
-        function showError(msg) {
-            errorBox.textContent = '⚠️ ' + msg;
-            errorBox.style.display = 'block';
-            console.error(msg);
-        }
-        window.addEventListener('error', e => showError('エラー: ' + (e.message || e.error)));
-        window.addEventListener('unhandledrejection', e => showError('エラー: ' + (e.reason && e.reason.message ? e.reason.message : e.reason)));
-    </script>
+  <div class="flex flex-col gap-4 w-full">
+    <div class="bg-white/95 backdrop-blur px-5 py-3 rounded-2xl border border-lime-100 text-xs text-lime-800 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
+      <p class="flex items-center gap-2">
+        <i class="fa-solid fa-circle-info text-base text-lime-600 flex-shrink-0"></i>
+        <span>🖐️ <strong>操作方法:</strong> 付箋を<strong>ドラッグ移動</strong>、右下の角をドラッグして<strong>サイズ変更</strong>ができます。</span>
+      </p>
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+        <button onclick="alignStickyNotes()" class="bg-lime-50 hover:bg-lime-100 text-lime-700 border border-lime-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-table-cells-large"></i><span>きれいに整列する</span>
+        </button>
+        <button onclick="toggleFullscreen()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-expand"></i><span>全画面表示モード</span>
+        </button>
+        <button onclick="exportBoardPDF()" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5">
+          <i class="fa-solid fa-file-pdf"></i><span>PDFで書き出す</span>
+        </button>
+      </div>
+    </div>
 
-    <script type="module">
-        // esm.sh は Node ポリフィルを自動で処理するため y-webrtc も安定して動く
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = '📦 ライブラリ読み込み中...';
+    <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100">
+      <div class="text-xs font-semibold text-slate-500 mb-2.5 flex items-center gap-1.5">
+        <i class="fa-solid fa-calendar-days text-lime-600"></i><span>記録日で絞り込み:</span>
+      </div>
+      <div id="dateTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-1"></div>
+    </div>
 
-        let Y, WebrtcProvider;
-        try {
-            const yjs = await import('https://esm.sh/yjs@13.6.18');
-            Y = yjs;
-            const ywebrtc = await import('https://esm.sh/y-webrtc@10.3.0?deps=yjs@13.6.18');
-            WebrtcProvider = ywebrtc.WebrtcProvider;
-        } catch (err) {
-            showError('ライブラリ読み込み失敗: ' + err.message);
-            throw err;
-        }
+    <div id="boardContainer" class="board-canvas rounded-3xl border border-slate-200/80 shadow-inner overflow-hidden w-full"></div>
+  </div>
+</main>
 
-        const board       = document.getElementById('board');
-        const roomInput   = document.getElementById('roomInput');
-        const joinBtn     = document.getElementById('joinBtn');
-        const addBtn      = document.getElementById('addBtn');
-        const userCountEl = document.getElementById('userCount');
+<!-- 新規記録 -->
+<div id="recordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]">
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-lime-50/50">
+      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-pen-to-square text-lime-600"></i>新しい活動の記録を追加
+      </h3>
+      <button onclick="closeRecordModal()" class="text-slate-400 hover:text-slate-600 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="recordForm" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto space-y-5">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">対象児童生徒 <span class="text-red-500">*</span></label>
+          <select id="formStudent" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition">
+            <option value="" disabled selected>選択してください</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">記録日 <span class="text-red-500">*</span></label>
+          <input type="date" id="formDate" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-600 mb-1.5">活動・場面名 <span class="text-slate-400 font-normal">(例: 5時間目算数、中休み等)</span></label>
+        <input type="text" id="formActivity" placeholder="例：昼休み、図工の協働制作" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition">
+      </div>
+      <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100/70">
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-xs font-bold text-blue-800 flex items-center gap-1">
+            <i class="fa-solid fa-magnifying-glass"></i>① 観察した事実 (Fact) <span class="text-red-500">*</span>
+          </label>
+          <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">客観的な出来事</span>
+        </div>
+        <textarea id="formFact" required rows="3" placeholder="実際に起こったこと、本人の発言や具体的な行動を客観的に記述します。主観や感想は含めません。" class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none transition placeholder-slate-400"></textarea>
+      </div>
+      <div class="bg-amber-50/50 p-4 rounded-xl border border-amber-100/70">
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-xs font-bold text-amber-800 flex items-center gap-1">
+            <i class="fa-solid fa-lightbulb"></i>② 指導員の解釈 (Interpretation) <span class="text-red-500">*</span>
+          </label>
+          <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">主観・推測・仮説</span>
+        </div>
+        <textarea id="formInterpretation" required rows="3" placeholder="事実から推測される心理、意図、今後のアプローチ仮説などを記述します。" class="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none transition placeholder-slate-400"></textarea>
+      </div>
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+        <button type="button" onclick="closeRecordModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition">キャンセル</button>
+        <button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md shadow-lime-200 transition flex items-center gap-2 text-xs">
+          <i class="fa-solid fa-circle-plus"></i><span>記録ボードに貼る</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
-        const colors = ['color-yellow', 'color-pink', 'color-blue', 'color-green', 'color-orange'];
-        let ydoc = null, provider = null, yNotes = null;
+<!-- 名簿 -->
+<div id="studentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]">
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-gear text-lime-600"></i>児童生徒名簿の管理</h3>
+      <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="p-5 overflow-y-auto space-y-4">
+      <form id="studentAddForm" onsubmit="addStudent(event)" class="flex gap-2">
+        <input type="text" id="newStudentName" required placeholder="児童生徒の名前を入力..." class="flex-grow px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition">
+        <button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition flex items-center gap-1"><i class="fa-solid fa-plus"></i><span>追加</span></button>
+      </form>
+      <div>
+        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">登録生徒一覧</h4>
+        <ul id="studentList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto border border-slate-100 rounded-xl"></ul>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+      <button onclick="closeStudentModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">閉じる</button>
+    </div>
+  </div>
+</div>
 
-        statusEl.textContent = '↑ ルーム名を入れて「参加」を押してください';
+<!-- バックアップ -->
+<div id="backupModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-database text-indigo-600"></i>データ移行（インポート／エクスポート）</h3>
+      <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="p-5 space-y-4 text-sm">
+      <p class="text-xs text-slate-500">データを他の端末へ移動、またはバックアップに使用します。</p>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-1.5 text-xs"><i class="fa-solid fa-download text-indigo-500"></i>データをエクスポート（JSON形式）</h4>
+        <p class="text-xs text-slate-500 mb-3">現在のすべての生徒データと記録データをファイルとして保存します。</p>
+        <button onclick="exportDataJSON()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-xs transition inline-flex items-center gap-1.5"><i class="fa-solid fa-file-arrow-down"></i> バックアップファイルをダウンロード</button>
+      </div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-1.5 text-xs"><i class="fa-solid fa-upload text-amber-500"></i>データをインポート（復元）</h4>
+        <p class="text-xs text-slate-500 mb-3 text-red-600">⚠️ 注意：インポートを実行すると、現在のデータは上書きされます。</p>
+        <div class="flex items-center gap-2">
+          <input type="file" id="importFile" accept=".json" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+          <button onclick="importDataJSON()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex-shrink-0">適用する</button>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+      <button onclick="closeBackupModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">閉じる</button>
+    </div>
+  </div>
+</div>
 
-        function uid() {
-            return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-        }
+<!-- 編集 -->
+<div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]">
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
+      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-lime-600"></i>記録の編集</h3>
+      <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="editForm" onsubmit="handleEditSubmit(event)" class="p-5 overflow-y-auto space-y-4">
+      <input type="hidden" id="editRecordId">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">対象児童生徒</label>
+          <select id="editStudent" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">記録日</label>
+          <input type="date" id="editDate" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">活動・場面名</label>
+        <input type="text" id="editActivity" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition">
+      </div>
+      <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+        <label class="block text-xs font-bold text-blue-800 mb-1">事実 (Fact)</label>
+        <textarea id="editFact" required rows="3" class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"></textarea>
+      </div>
+      <div class="bg-amber-50/50 p-3 rounded-xl border border-amber-100">
+        <label class="block text-xs font-bold text-amber-800 mb-1">指導員の解釈 (Interpretation)</label>
+        <textarea id="editInterpretation" required rows="3" class="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeEditModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">キャンセル</button>
+        <button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-semibold px-5 py-2 rounded-xl text-xs transition">保存する</button>
+      </div>
+    </form>
+  </div>
+</div>
 
-        function join() {
-            const room = roomInput.value.trim();
-            if (!room) { alert('ルーム名を入力してください'); return; }
-            if (provider) provider.destroy();
-            if (ydoc) ydoc.destroy();
-            board.innerHTML = '';
+<!-- 確認ダイアログ -->
+<div id="customConfirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
+  <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
+    <div class="p-5 border-b border-slate-100 flex items-center gap-2.5">
+      <div class="bg-amber-50 text-amber-600 p-2 rounded-lg" id="confirmIconContainer">
+        <i id="confirmIcon" class="fa-solid fa-circle-question text-lg"></i>
+      </div>
+      <h3 class="text-base font-bold text-slate-800">実行確認</h3>
+    </div>
+    <div class="p-5 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed" id="confirmMessage"></div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+      <button id="confirmCancelBtn" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold px-4 py-2 rounded-xl text-xs transition">キャンセル</button>
+      <button id="confirmOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">実行する</button>
+    </div>
+  </div>
+</div>
 
-            try {
-                ydoc = new Y.Doc();
-                yNotes = ydoc.getMap('notes');
-                provider = new WebrtcProvider('sticky-' + room, ydoc, {
-                    // 稼働中の公開シグナリングサーバーのみ使用
-                    signaling: [
-                        'wss://signaling.yjs.dev',
-                        'wss://y-webrtc-signaling-eu.fly.dev',
-                        'wss://demos.yjs.dev/ws'
-                    ],
-                    password: room,
-                    maxConns: 20,
-                    filterBcConns: true,
-                    // NAT越え用のSTUNサーバーを明示的に設定
-                    peerOpts: {
-                        config: {
-                            iceServers: [
-                                { urls: 'stun:stun.l.google.com:19302' },
-                                { urls: 'stun:stun1.l.google.com:19302' },
-                                { urls: 'stun:global.stun.twilio.com:3478' },
-                                // 無料公開TURNサーバー（P2Pがブロックされる環境で中継接続する）
-                                {
-                                    urls: 'turn:openrelay.metered.ca:80',
-                                    username: 'openrelayproject',
-                                    credential: 'openrelayproject'
-                                },
-                                {
-                                    urls: 'turn:openrelay.metered.ca:443',
-                                    username: 'openrelayproject',
-                                    credential: 'openrelayproject'
-                                },
-                                {
-                                    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                                    username: 'openrelayproject',
-                                    credential: 'openrelayproject'
-                                }
-                            ]
-                        }
-                    }
-                });
+<div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm">
+  <i id="toastIcon" class="fa-solid fa-circle-check text-lime-400"></i>
+  <span id="toastMessage">メッセージ</span>
+</div>
 
-                // 詳細な診断ログ
-                console.log('[WebRTC] ルーム名:', 'sticky-' + room);
-                console.log('[WebRTC] Provider作成完了', provider);
+<footer class="bg-white border-t border-slate-100 mt-auto py-6">
+  <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+    <p>© 2026 事実と解釈の記録ボード</p>
+  </div>
+</footer>
 
-                provider.on('status', e => {
-                    console.log('[WebRTC] status:', e);
-                    statusEl.textContent = e.connected ? '✅ シグナリング接続中' : '🔄 接続待機中';
-                });
-                provider.on('peers', e => {
-                    console.log('[WebRTC] peers:', e);
-                    const webrtcCount = e.webrtcPeers ? e.webrtcPeers.length : 0;
-                    const bcCount = e.bcPeers ? e.bcPeers.length : 0;
-                    const total = webrtcCount + bcCount;
-                    if (total > 0) {
-                        statusEl.textContent = '✅ シグナリング接続中 ・ ピア' + total + '人と同期中';
-                    }
-                });
-                provider.awareness.on('change', () => {
-                    const n = provider.awareness.getStates().size;
-                    userCountEl.textContent = '👥 ' + n + '人';
-                    console.log('[Awareness] ユーザー数:', n);
-                });
+<script>
+const DEFAULT_STUDENTS = [
+  { id: "s-1", name: "佐藤 陸 (りく)" },
+  { id: "s-2", name: "鈴木 芽依 (めい)" },
+  { id: "s-3", name: "高橋 蓮 (れん)" },
+  { id: "s-4", name: "田中 結菜 (ゆいな)" }
+];
+const DEFAULT_RECORDS = [
+  { id: "rec-1", studentId: "s-1", date: "2026-05-18", activity: "5時間目 算数のグループワーク",
+    fact: "図形問題の解き方を考える時間、自分から口を開かず鉄筆を回して外を見ていたが、隣の鈴木さんが「ここどうやる？」と聞くと、自分のノートを見せて「これね、ここを半分にするんだよ」と小さな声で教え始めた。",
+    interpretation: "自分から輪に入るのが苦手な内向的な面がある。しかし、他者から明確に求められると、実は確かな知識を持っており丁寧に教えることができる。",
+    x: 10, y: 12, w: 320, h: 280 },
+  { id: "rec-2", studentId: "s-2", date: "2026-05-19", activity: "中休みのドッジボール",
+    fact: "ボールが体に当たりアウトになった際、「当たってない！あいつの投げ方は反則だ！」と大声で主張し、地面を強く蹴ってその場から走り去り、体育館裏で体育座りをしていた。",
+    interpretation: "ルールに対する完璧主義や、負け・ミスを受け入れる自己受容の弱さが見られる。感情の起伏が急激に高まった際、他罰的な言動をとってしまう。",
+    x: 52, y: 15, w: 320, h: 280 },
+  { id: "rec-3", studentId: "s-3", date: "2026-05-20", activity: "朝の会・スピーチ",
+    fact: "週末の出来事の発表にて、自ら挨手して一番に登壇した。「おじいちゃんの家で犬を触ったのが楽しかったです」と、クラス全員に向けて話し、質問にも2問ハキハキと答えた。",
+    interpretation: "自己表現に対するモチベーションが非常に高く、成功体験を積んでいる。クラス全体が温かく聞いてくれるという安心感を持っている様子。",
+    x: 30, y: 40, w: 320, h: 280 }
+];
 
-                yNotes.observeDeep(() => render());
+let students = [];
+let records = [];
+let selectedDateTab = "all";
 
-                // 自分の awareness state を明示的に設定（他クライアントから可視化される）
-                provider.awareness.setLocalState({
-                    user: { name: 'User-' + Math.floor(Math.random() * 1000), joinedAt: Date.now() }
-                });
+function showToast(message, type="success") {
+  const toast = document.getElementById("toast");
+  const toastMsg = document.getElementById("toastMessage");
+  const toastIcon = document.getElementById("toastIcon");
+  toastMsg.innerText = message;
+  if (type === "success") toastIcon.className = "fa-solid fa-circle-check text-lime-400";
+  else if (type === "info") toastIcon.className = "fa-solid fa-circle-info text-blue-400";
+  else toastIcon.className = "fa-solid fa-triangle-exclamation text-red-400";
+  toast.classList.remove("translate-y-20", "opacity-0");
+  toast.classList.add("translate-y-0", "opacity-100");
+  setTimeout(() => {
+    toast.classList.remove("translate-y-0", "opacity-100");
+    toast.classList.add("translate-y-20", "opacity-0");
+  }, 3000);
+}
 
-                addBtn.disabled = false;
-                statusEl.textContent = '✅ ルーム「' + room + '」に参加';
-                render();
-            } catch (err) {
-                showError('接続エラー: ' + err.message);
-            }
-        }
+function loadData() {
+  const storedStudents = localStorage.getItem("observation_students_v2");
+  const storedRecords = localStorage.getItem("observation_records_v2");
+  if (storedStudents) students = JSON.parse(storedStudents);
+  else { students = [...DEFAULT_STUDENTS]; localStorage.setItem("observation_students_v2", JSON.stringify(students)); }
+  if (storedRecords) records = JSON.parse(storedRecords);
+  else { records = [...DEFAULT_RECORDS]; localStorage.setItem("observation_records_v2", JSON.stringify(records)); }
+}
+function saveData() {
+  localStorage.setItem("observation_students_v2", JSON.stringify(students));
+  localStorage.setItem("observation_records_v2", JSON.stringify(records));
+}
 
-        function addNote() {
-            const id = uid();
-            const note = new Y.Map();
-            note.set('x', Math.random() * 300 + 50);
-            note.set('y', Math.random() * 200 + 50);
-            note.set('text', '');
-            note.set('color', colors[Math.floor(Math.random() * colors.length)]);
-            yNotes.set(id, note);
-        }
+function renderDateTabs() {
+  const container = document.getElementById("dateTabsContainer");
+  if (!container) return;
+  const dates = [...new Set(records.map(r => r.date))].sort((a, b) => new Date(b) - new Date(a));
+  if (selectedDateTab !== "all" && !dates.includes(selectedDateTab)) selectedDateTab = "all";
+  let html = "";
+  const allCount = records.length;
+  const allActive = selectedDateTab === "all";
+  html += `<button type="button" onclick="changeDateTab('all')" class="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${allActive ? 'bg-lime-600 text-white shadow-md shadow-lime-100' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'}"><span>すべての日程</span><span class="text-[10px] px-1.5 py-0.5 rounded-full ${allActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'} font-bold">${allCount}</span></button>`;
+  dates.forEach(date => {
+    const count = records.filter(r => r.date === date).length;
+    const isActive = selectedDateTab === date;
+    const label = formatDateLabel(date);
+    html += `<button type="button" onclick="changeDateTab('${date}')" class="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${isActive ? 'bg-lime-600 text-white shadow-md shadow-lime-100' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'}"><span>${label}</span><span class="text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'} font-bold">${count}</span></button>`;
+  });
+  container.innerHTML = html;
+}
+function changeDateTab(date) { selectedDateTab = date; renderDateTabs(); renderBoards(); }
+function formatDateLabel(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const dow = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+    return `${d.getMonth() + 1}/${d.getDate()}(${dow})`;
+  } catch (e) { return dateStr; }
+}
 
-        function render() {
-            const liveIds = new Set();
-            yNotes.forEach((_, id) => liveIds.add(id));
-            Array.from(board.children).forEach(el => {
-                if (!liveIds.has(el.dataset.id)) el.remove();
-            });
-            yNotes.forEach((note, id) => {
-                let el = board.querySelector('[data-id="' + id + '"]');
-                if (!el) el = createStickyEl(id, note);
-                updateStickyEl(el, note);
-            });
-        }
+function showCustomConfirm(message, isDanger = false) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("customConfirmModal");
+    const msgEl = document.getElementById("confirmMessage");
+    const okBtn = document.getElementById("confirmOkBtn");
+    const cancelBtn = document.getElementById("confirmCancelBtn");
+    const icon = document.getElementById("confirmIcon");
+    const iconContainer = document.getElementById("confirmIconContainer");
+    msgEl.innerText = message;
+    if (isDanger) {
+      okBtn.className = "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm";
+      icon.className = "fa-solid fa-triangle-exclamation text-lg";
+      iconContainer.className = "bg-red-50 text-red-600 p-2 rounded-lg";
+    } else {
+      okBtn.className = "bg-lime-600 hover:bg-lime-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm";
+      icon.className = "fa-solid fa-circle-question text-lg";
+      iconContainer.className = "bg-amber-50 text-amber-600 p-2 rounded-lg";
+    }
+    modal.classList.remove("hidden"); modal.classList.add("flex");
+    const handleOk = () => { cleanup(); resolve(true); };
+    const handleCancel = () => { cleanup(); resolve(false); };
+    const cleanup = () => {
+      modal.classList.remove("flex"); modal.classList.add("hidden");
+      okBtn.removeEventListener("click", handleOk);
+      cancelBtn.removeEventListener("click", handleCancel);
+    };
+    okBtn.addEventListener("click", handleOk);
+    cancelBtn.addEventListener("click", handleCancel);
+  });
+}
 
-        function createStickyEl(id, note) {
-            const el = document.createElement('div');
-            el.className = 'sticky ' + (note.get('color') || 'color-yellow');
-            el.dataset.id = id;
-            el.innerHTML =
-                '<textarea placeholder="メモを入力..."></textarea>' +
-                '<div class="toolbar">' +
-                '  <span class="color-picker" title="色を変更">🎨</span>' +
-                '  <span class="delete-btn" title="削除">✕</span>' +
-                '</div>';
-            board.appendChild(el);
+window.onload = function() {
+  loadData();
+  document.getElementById("formDate").value = new Date().toISOString().split('T')[0];
+  updateStudentDropdowns();
+  renderDateTabs();
+  renderBoards();
+  setupGlobalDragListeners();
+};
 
-            const textarea = el.querySelector('textarea');
-            textarea.addEventListener('input', () => note.set('text', textarea.value));
+function updateStudentDropdowns() {
+  const filterSelect = document.getElementById("filterStudent");
+  const formSelect = document.getElementById("formStudent");
+  const editSelect = document.getElementById("editStudent");
+  filterSelect.innerHTML = '<option value="">すべての児童生徒</option>';
+  formSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
+  editSelect.innerHTML = '';
+  students.forEach(student => {
+    [filterSelect, formSelect, editSelect].forEach(sel => {
+      const opt = document.createElement("option");
+      opt.value = student.id;
+      opt.textContent = student.name;
+      sel.appendChild(opt);
+    });
+  });
+}
 
-            el.querySelector('.delete-btn').addEventListener('click', e => {
-                e.stopPropagation();
-                yNotes.delete(id);
-            });
+function openRecordModal() {
+  document.getElementById("recordModal").classList.remove("hidden");
+  document.getElementById("recordModal").classList.add("flex");
+}
+function closeRecordModal() {
+  document.getElementById("recordModal").classList.remove("flex");
+  document.getElementById("recordModal").classList.add("hidden");
+}
 
-            el.querySelector('.color-picker').addEventListener('click', e => {
-                e.stopPropagation();
-                const cur = note.get('color') || colors[0];
-                const idx = colors.indexOf(cur);
-                note.set('color', colors[(idx + 1) % colors.length]);
-            });
+let draggedElement = null, dragOffsetX = 0, dragOffsetY = 0;
+let resizingElement = null, resizeStartWidth = 0, resizeStartHeight = 0, resizeStartX = 0, resizeStartY = 0;
 
-            let dragging = false, offsetX = 0, offsetY = 0;
-            const onDown = (clientX, clientY, target) => {
-                if (target.tagName === 'TEXTAREA') return false;
-                if (target.classList.contains('delete-btn')) return false;
-                if (target.classList.contains('color-picker')) return false;
-                dragging = true;
-                offsetX = clientX - el.offsetLeft;
-                offsetY = clientY - el.offsetTop;
-                el.style.zIndex = 1000;
-                return true;
-            };
-            el.addEventListener('mousedown', e => onDown(e.clientX, e.clientY, e.target));
-            document.addEventListener('mousemove', e => {
-                if (!dragging) return;
-                note.set('x', e.clientX - offsetX);
-                note.set('y', e.clientY - offsetY);
-            });
-            document.addEventListener('mouseup', () => {
-                if (dragging) { dragging = false; el.style.zIndex = ''; }
-            });
-            el.addEventListener('touchstart', e => {
-                const t = e.touches[0];
-                if (onDown(t.clientX, t.clientY, e.target)) e.preventDefault();
-            }, { passive: false });
-            document.addEventListener('touchmove', e => {
-                if (!dragging) return;
-                const t = e.touches[0];
-                note.set('x', t.clientX - offsetX);
-                note.set('y', t.clientY - offsetY);
-            });
-            document.addEventListener('touchend', () => {
-                if (dragging) { dragging = false; el.style.zIndex = ''; }
-            });
+function startDrag(e, elementId) {
+  if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input') || e.target.closest('.resize-handle')) return;
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  draggedElement = element;
+  element.style.zIndex = "100";
+  const rect = element.getBoundingClientRect();
+  const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+  const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+  dragOffsetX = clientX - rect.left;
+  dragOffsetY = clientY - rect.top;
+  e.preventDefault();
+}
+function startResize(e, elementId) {
+  e.stopPropagation(); e.preventDefault();
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  resizingElement = element;
+  element.style.zIndex = "100";
+  const rect = element.getBoundingClientRect();
+  resizeStartWidth = rect.width;
+  resizeStartHeight = rect.height;
+  resizeStartX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+  resizeStartY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+}
+function setupGlobalDragListeners() {
+  const handleMove = (e) => {
+    if (resizingElement) {
+      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+      let newWidth = resizeStartWidth + (clientX - resizeStartX);
+      let newHeight = resizeStartHeight + (clientY - resizeStartY);
+      if (newWidth < 220) newWidth = 220;
+      if (newHeight < 180) newHeight = 180;
+      const boardRect = document.getElementById("boardContainer").getBoundingClientRect();
+      if (newWidth > boardRect.width) newWidth = boardRect.width;
+      if (newHeight > boardRect.height) newHeight = boardRect.height;
+      resizingElement.style.width = `${newWidth}px`;
+      resizingElement.style.height = `${newHeight}px`;
+      e.preventDefault();
+      return;
+    }
+    if (!draggedElement) return;
+    const boardRect = document.getElementById("boardContainer").getBoundingClientRect();
+    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+    let newLeft = clientX - boardRect.left - dragOffsetX;
+    let newTop = clientY - boardRect.top - dragOffsetY;
+    const cw = draggedElement.offsetWidth, ch = draggedElement.offsetHeight;
+    if (newLeft < 0) newLeft = 0;
+    if (newTop < 0) newTop = 0;
+    if (newLeft > boardRect.width - cw) newLeft = boardRect.width - cw;
+    if (newTop > boardRect.height - ch) newTop = boardRect.height - ch;
+    const px = (newLeft / boardRect.width) * 100;
+    const py = (newTop / boardRect.height) * 100;
+    draggedElement.style.left = `${px}%`;
+    draggedElement.style.top = `${py}%`;
+  };
+  const handleEnd = () => {
+    if (resizingElement) {
+      const id = resizingElement.id.replace('note-', '');
+      const i = records.findIndex(r => r.id === id);
+      if (i !== -1) { records[i].w = resizingElement.offsetWidth; records[i].h = resizingElement.offsetHeight; saveData(); }
+      resizingElement.style.zIndex = "10";
+      resizingElement = null;
+    }
+    if (draggedElement) {
+      const id = draggedElement.id.replace('note-', '');
+      const i = records.findIndex(r => r.id === id);
+      if (i !== -1) {
+        records[i].x = parseFloat(draggedElement.style.left);
+        records[i].y = parseFloat(draggedElement.style.top);
+        saveData();
+      }
+      draggedElement.style.zIndex = "10";
+      draggedElement = null;
+    }
+  };
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleEnd);
+  document.addEventListener('touchmove', handleMove, { passive: false });
+  document.addEventListener('touchend', handleEnd);
+  window.addEventListener('resize', adjustNotesOnResize);
+}
+function adjustNotesOnResize() {
+  const board = document.getElementById("boardContainer");
+  if (!board) return;
+  const boardRect = board.getBoundingClientRect();
+  records.forEach(rec => {
+    const note = document.getElementById(`note-${rec.id}`);
+    if (!note) return;
+    let leftPx = (rec.x / 100) * boardRect.width;
+    let topPx = (rec.y / 100) * boardRect.height;
+    if (leftPx + note.offsetWidth > boardRect.width) leftPx = boardRect.width - note.offsetWidth;
+    if (leftPx < 0) leftPx = 0;
+    if (topPx + note.offsetHeight > boardRect.height) topPx = boardRect.height - note.offsetHeight;
+    if (topPx < 0) topPx = 0;
+    rec.x = (leftPx / boardRect.width) * 100;
+    rec.y = (topPx / boardRect.height) * 100;
+    note.style.left = `${rec.x}%`;
+    note.style.top = `${rec.y}%`;
+  });
+  saveData();
+}
 
-            return el;
-        }
+function alignStickyNotes() {
+  const board = document.getElementById("boardContainer");
+  const boardWidth = board.offsetWidth;
+  const notes = Array.from(board.querySelectorAll('.sticky-note'));
+  if (notes.length === 0) return;
+  let cols = 3;
+  if (boardWidth < 640) cols = 1;
+  else if (boardWidth < 1024) cols = 2;
+  const px = 4, py = 5;
+  const cwp = (100 - (px * (cols + 1))) / cols;
+  const chp = 25;
+  notes.forEach((note, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const x = px + col * (cwp + px);
+    const y = py + row * (chp + py);
+    note.style.transition = "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)";
+    note.style.left = `${x}%`;
+    note.style.top = `${y}%`;
+    const id = note.id.replace('note-', '');
+    const i = records.findIndex(r => r.id === id);
+    if (i !== -1) { records[i].x = x; records[i].y = y; }
+    setTimeout(() => { note.style.transition = ""; }, 500);
+  });
+  saveData();
+  showToast("付箋をきれいに整列しました。");
+}
+function toggleFullscreen() {
+  const board = document.getElementById("boardContainer");
+  if (!document.fullscreenElement) {
+    if (board.requestFullscreen) board.requestFullscreen();
+    else if (board.webkitRequestFullscreen) board.webkitRequestFullscreen();
+    else if (board.msRequestFullscreen) board.msRequestFullscreen();
+    showToast("全画面表示モードを開始しました（Escで戻ります）", "info");
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+  }
+}
 
-        function updateStickyEl(el, note) {
-            el.style.left = (note.get('x') || 0) + 'px';
-            el.style.top  = (note.get('y') || 0) + 'px';
-            const color = note.get('color') || 'color-yellow';
-            colors.forEach(c => el.classList.remove(c));
-            el.classList.add(color);
-            const textarea = el.querySelector('textarea');
-            const newText = note.get('text') || '';
-            if (textarea && textarea.value !== newText) {
-                const focused = document.activeElement === textarea;
-                const s = textarea.selectionStart, e2 = textarea.selectionEnd;
-                textarea.value = newText;
-                if (focused) {
-                    textarea.focus();
-                    try { textarea.setSelectionRange(s, e2); } catch(_) {}
-                }
-            }
-        }
+function exportBoardPDF() {
+  const board = document.getElementById("boardContainer");
+  const actionButtons = board.querySelectorAll('.sticky-action-buttons');
+  const resizeHandles = board.querySelectorAll('.resize-handle');
+  actionButtons.forEach(b => b.style.display = 'none');
+  resizeHandles.forEach(h => h.style.display = 'none');
+  const notes = board.querySelectorAll('.sticky-note');
+  notes.forEach(n => { n.style.boxShadow = 'none'; n.style.border = '1px solid #cbd5e1'; });
+  const opt = {
+    margin: 8,
+    filename: `観察記録ボード_${selectedDateTab}_${new Date().toISOString().split('T')[0]}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  };
+  showToast("PDFを生成しています。少々お待ちください...", "info");
+  html2pdf().set(opt).from(board).save().then(() => {
+    actionButtons.forEach(b => b.style.display = 'flex');
+    resizeHandles.forEach(h => h.style.display = 'flex');
+    notes.forEach(n => { n.style.boxShadow = ''; n.style.border = ''; });
+    showToast("PDFの出力が完了しました。");
+  }).catch(() => {
+    actionButtons.forEach(b => b.style.display = 'flex');
+    resizeHandles.forEach(h => h.style.display = 'flex');
+    notes.forEach(n => { n.style.boxShadow = ''; n.style.border = ''; });
+    showToast("PDF生成中にエラーが発生しました。", "error");
+  });
+}
 
-        joinBtn.addEventListener('click', join);
-        addBtn.addEventListener('click', addNote);
-        roomInput.addEventListener('keydown', e => { if (e.key === 'Enter') join(); });
-    </script>
+function renderBoards() {
+  const board = document.getElementById("boardContainer");
+  if (!board) return;
+  const fs = document.getElementById("filterStudent").value;
+  const sv = document.getElementById("filterSearch").value.trim().toLowerCase();
+  const filtered = records.filter(rec => {
+    const matchStudent = fs ? rec.studentId === fs : true;
+    let matchSearch = true;
+    if (sv) {
+      const st = students.find(s => s.id === rec.studentId);
+      const sn = st ? st.name.toLowerCase() : "";
+      matchSearch = sn.includes(sv) || rec.activity.toLowerCase().includes(sv)
+        || rec.fact.toLowerCase().includes(sv) || rec.interpretation.toLowerCase().includes(sv);
+    }
+    return matchStudent && matchSearch;
+  }).filter(rec => selectedDateTab === "all" ? true : rec.date === selectedDateTab);
+  board.innerHTML = "";
+  if (filtered.length === 0) {
+    board.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-sm pointer-events-none"><i class="fa-solid fa-note-sticky text-4xl mb-3 opacity-30"></i>該当する記録付箋がありません。<br>上の「新規記録を追加」から記録を投稿してください。</div>`;
+    updateStats(); return;
+  }
+  filtered.forEach((rec, index) => {
+    if (rec.x === undefined || rec.y === undefined) {
+      rec.x = 10 + (index * 6) % 55;
+      rec.y = 10 + (index * 8) % 50;
+    }
+    const w = rec.w || 320, h = rec.h || 280;
+    const card = document.createElement("div");
+    card.id = `note-${rec.id}`;
+    card.className = "sticky-note absolute bg-white rounded-2xl border border-slate-100 flex flex-col";
+    card.style.left = `${rec.x}%`;
+    card.style.top = `${rec.y}%`;
+    card.style.width = `${w}px`;
+    card.style.height = `${h}px`;
+    card.style.zIndex = "10";
+    card.addEventListener('mousedown', (e) => startDrag(e, `note-${rec.id}`));
+    card.addEventListener('touchstart', (e) => startDrag(e, `note-${rec.id}`), { passive: false });
+    card.innerHTML = `
+      <div class="h-5 bg-gradient-to-r from-lime-100 to-emerald-100 border-b border-lime-200/50 flex items-center justify-center cursor-grab active:cursor-grabbing select-none flex-shrink-0">
+        <div class="w-12 h-1 bg-slate-300/60 rounded-full"></div>
+      </div>
+      <div class="p-3.5 flex flex-col gap-2.5 flex-grow overflow-hidden">
+        <div class="bg-blue-50/70 p-2.5 rounded-xl border border-blue-100/50 flex-1 flex flex-col min-h-[60px] overflow-hidden">
+          <div class="text-[9px] font-bold text-blue-700 tracking-wider mb-1 flex items-center gap-1 select-none flex-shrink-0"><i class="fa-solid fa-magnifying-glass"></i> 事実 (Fact)</div>
+          <p class="text-slate-700 text-xs leading-relaxed handwritten font-medium whitespace-pre-wrap flex-grow overflow-y-auto pr-1">${escapeHtml(rec.fact)}</p>
+        </div>
+        <div class="bg-amber-50/70 p-2.5 rounded-xl border border-amber-100/50 flex-1 flex flex-col min-h-[60px] overflow-hidden">
+          <div class="text-[9px] font-bold text-amber-700 tracking-wider mb-1 flex items-center gap-1 select-none flex-shrink-0"><i class="fa-solid fa-lightbulb"></i> 指導員の解釈 (Interpretation)</div>
+          <p class="text-slate-700 text-xs leading-relaxed handwritten font-medium whitespace-pre-wrap flex-grow overflow-y-auto pr-1">${escapeHtml(rec.interpretation)}</p>
+        </div>
+        <div class="flex items-center justify-end mt-1 pt-1.5 border-t border-slate-100 text-[10px] text-slate-400 flex-shrink-0">
+          <div class="flex items-center gap-1 sticky-action-buttons select-none">
+            <button onclick="openEditRecord('${rec.id}')" title="編集する" class="text-slate-400 hover:text-slate-700 p-1 rounded transition"><i class="fa-solid fa-pen text-xs"></i></button>
+            <button onclick="deleteRecordWithConfirm('${rec.id}')" title="削除する" class="text-slate-400 hover:text-red-600 p-1 rounded transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
+          </div>
+        </div>
+      </div>
+      <div class="resize-handle absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 z-30 select-none" onmousedown="startResize(event, 'note-${rec.id}')" ontouchstart="startResize(event, 'note-${rec.id}')">
+        <svg class="w-3 h-3 text-slate-300 hover:text-slate-500 transition pointer-events-none" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="2" y1="8" x2="8" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="5" y1="8" x2="8" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>`;
+    board.appendChild(card);
+  });
+  updateStats();
+}
+function updateStats() {
+  const fs = document.getElementById("filterStudent").value;
+  const sv = document.getElementById("filterSearch").value.trim().toLowerCase();
+  const filtered = records.filter(rec => {
+    const ms = fs ? rec.studentId === fs : true;
+    let mse = true;
+    if (sv) {
+      const st = students.find(s => s.id === rec.studentId);
+      const sn = st ? st.name.toLowerCase() : "";
+      mse = sn.includes(sv) || rec.activity.toLowerCase().includes(sv)
+        || rec.fact.toLowerCase().includes(sv) || rec.interpretation.toLowerCase().includes(sv);
+    }
+    const md = selectedDateTab === "all" ? true : rec.date === selectedDateTab;
+    return ms && mse && md;
+  });
+  document.getElementById("statsCount").innerText = filtered.length;
+}
+function applyFilters() { renderBoards(); }
+
+function handleFormSubmit(e) {
+  e.preventDefault();
+  const studentId = document.getElementById("formStudent").value;
+  const date = document.getElementById("formDate").value;
+  const activity = document.getElementById("formActivity").value.trim();
+  const fact = document.getElementById("formFact").value.trim();
+  const interpretation = document.getElementById("formInterpretation").value.trim();
+  if (!studentId || !date || !fact || !interpretation) { showToast("必須項目を入力してください。", "error"); return; }
+  records.push({
+    id: "rec-" + Date.now(),
+    studentId, date,
+    activity: activity || "通常活動",
+    fact, interpretation,
+    x: 25 + Math.random() * 20,
+    y: 20 + Math.random() * 20,
+    w: 320, h: 280
+  });
+  saveData();
+  selectedDateTab = date;
+  renderDateTabs();
+  renderBoards();
+  closeRecordModal();
+  document.getElementById("formActivity").value = "";
+  document.getElementById("formFact").value = "";
+  document.getElementById("formInterpretation").value = "";
+  showToast("ボードに新しい付箋を貼りました！");
+}
+async function deleteRecordWithConfirm(recordId) {
+  if (await showCustomConfirm("この観察記録（事実と解釈の一体型付箋）を削除してもよろしいですか？", true)) {
+    records = records.filter(r => r.id !== recordId);
+    saveData(); renderDateTabs(); renderBoards();
+    showToast("付箋を削除しました。");
+  }
+}
+function openEditRecord(recordId) {
+  const rec = records.find(r => r.id === recordId);
+  if (!rec) return;
+  document.getElementById("editRecordId").value = rec.id;
+  document.getElementById("editStudent").value = rec.studentId;
+  document.getElementById("editDate").value = rec.date;
+  document.getElementById("editActivity").value = rec.activity;
+  document.getElementById("editFact").value = rec.fact;
+  document.getElementById("editInterpretation").value = rec.interpretation;
+  document.getElementById("editModal").classList.remove("hidden");
+  document.getElementById("editModal").classList.add("flex");
+}
+function closeEditModal() {
+  document.getElementById("editModal").classList.remove("flex");
+  document.getElementById("editModal").classList.add("hidden");
+}
+function handleEditSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById("editRecordId").value;
+  const i = records.findIndex(r => r.id === id);
+  if (i === -1) return;
+  const newDate = document.getElementById("editDate").value;
+  records[i].studentId = document.getElementById("editStudent").value;
+  records[i].date = newDate;
+  records[i].activity = document.getElementById("editActivity").value.trim();
+  records[i].fact = document.getElementById("editFact").value.trim();
+  records[i].interpretation = document.getElementById("editInterpretation").value.trim();
+  saveData();
+  selectedDateTab = newDate;
+  renderDateTabs(); renderBoards(); closeEditModal();
+  showToast("記録を更新しました。");
+}
+
+function openStudentModal() {
+  renderStudentList();
+  document.getElementById("studentModal").classList.remove("hidden");
+  document.getElementById("studentModal").classList.add("flex");
+}
+function closeStudentModal() {
+  document.getElementById("studentModal").classList.remove("flex");
+  document.getElementById("studentModal").classList.add("hidden");
+}
+function renderStudentList() {
+  const container = document.getElementById("studentList");
+  container.innerHTML = "";
+  if (students.length === 0) {
+    container.innerHTML = `<li class="p-4 text-center text-slate-400 text-xs">登録されている生徒はいません。</li>`;
+    return;
+  }
+  students.forEach(student => {
+    const count = records.filter(r => r.studentId === student.id).length;
+    const li = document.createElement("li");
+    li.className = "flex items-center justify-between p-3 hover:bg-slate-50 transition text-sm";
+    li.innerHTML = `<div class="flex items-center gap-2"><i class="fa-solid fa-graduation-cap text-slate-400 text-xs"></i><span class="font-medium text-slate-700">${escapeHtml(student.name)}</span><span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full font-bold">記録 ${count}件</span></div><button onclick="deleteStudentWithConfirm('${student.id}')" class="text-slate-400 hover:text-red-500 p-1.5 transition" title="削除"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
+    container.appendChild(li);
+  });
+}
+function addStudent(e) {
+  e.preventDefault();
+  const input = document.getElementById("newStudentName");
+  const name = input.value.trim();
+  if (!name) return;
+  students.push({ id: "s-" + Date.now(), name });
+  saveData();
+  input.value = "";
+  renderStudentList();
+  updateStudentDropdowns();
+  showToast(`${name} さんを名簿に追加しました。`);
+}
+async function deleteStudentWithConfirm(studentId) {
+  const student = students.find(s => s.id === studentId);
+  if (!student) return;
+  const count = records.filter(r => r.studentId === studentId).length;
+  let msg = `本当に「${student.name}」さんを名簿から削除しますか？`;
+  if (count > 0) msg += `\n\n⚠️ 警告: この生徒に関連する観察記録が ${count} 件あります。同時にすべて削除されます！`;
+  if (await showCustomConfirm(msg, true)) {
+    students = students.filter(s => s.id !== studentId);
+    records = records.filter(r => r.studentId !== studentId);
+    saveData();
+    renderStudentList();
+    updateStudentDropdowns();
+    renderDateTabs();
+    renderBoards();
+    showToast("生徒と関連する記録をすべて削除しました。");
+  }
+}
+
+function exportCSV() {
+  if (records.length === 0) { showToast("エクスポートするデータがありません。", "error"); return; }
+  let csv = "\ufeff\u8a18録ID,\u65e5\u4ed8,\u5150\u7ae5\u751f\u5f92\u540d,\u6d3b\u52d5\u5834\u9762,\u5ba2\u89b3\u7684\u4e8b\u5b9f(Fact),\u6307\u5c0e\u54e1\u89e3\u91c8(Interpretation)\r\n";
+  const esc = (t) => { if (!t) return '""'; return `"${t.replace(/"/g, '""')}"`; };
+  records.forEach(rec => {
+    const st = students.find(s => s.id === rec.studentId);
+    csv += [esc(rec.id), esc(rec.date), esc(st ? st.name : "不明"), esc(rec.activity), esc(rec.fact), esc(rec.interpretation)].join(",") + "\r\n";
+  });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute("download", `観察記録ボード_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  showToast("CSVファイルのエクスポートが完了しました。");
+}
+function openBackupModal() {
+  document.getElementById("backupModal").classList.remove("hidden");
+  document.getElementById("backupModal").classList.add("flex");
+}
+function closeBackupModal() {
+  document.getElementById("backupModal").classList.remove("flex");
+  document.getElementById("backupModal").classList.add("hidden");
+}
+function exportDataJSON() {
+  const dataPackage = { students, records, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(dataPackage, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute("download", `観察記録ボード_バックアップ_${new Date().toISOString().split('T')[0]}.json`);
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  showToast("バックアップデータを保存しました。");
+}
+function importDataJSON() {
+  const fileInput = document.getElementById("importFile");
+  if (!fileInput.files || fileInput.files.length === 0) { showToast("読み込むファイルを選択してください。", "error"); return; }
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.students || !imported.records) throw new Error("フォーマット不正");
+      if (await showCustomConfirm("本当にデータをインポートしますか？現在のデータはすべて上書きされます。", true)) {
+        students = imported.students;
+        records = imported.records;
+        saveData();
+        selectedDateTab = "all";
+        updateStudentDropdowns();
+        renderDateTabs();
+        renderBoards();
+        updateStats();
+        closeBackupModal();
+        showToast("データのインポートに成功しました！");
+      }
+    } catch (err) {
+      showToast("解析失敗。正しいJSONファイルかご確認ください。", "error");
+    }
+  };
+  reader.readAsText(fileInput.files[0]);
+}
+async function clearAllDataWithConfirm() {
+  const msg = "⚠️ 警告：すべての記録と生徒名簿を完全に消去します。よろしいですか？\n(消去後、ページを再読み込みすると初期デモデータが読み込まれます)";
+  if (await showCustomConfirm(msg, true)) {
+    students = []; records = []; saveData();
+    selectedDateTab = "all";
+    updateStudentDropdowns();
+    renderDateTabs();
+    renderBoards();
+    updateStats();
+    showToast("すべてのデータを消去しました。", "info");
+  }
+}
+
+function escapeHtml(s) {
+  if (typeof s !== 'string') return s;
+  return s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+</script>
 </body>
 </html>
