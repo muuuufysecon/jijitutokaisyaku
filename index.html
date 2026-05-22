@@ -3,54 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>事実と解釈の自由配置ボード - Observation Board</title>
+<title>事実と解釈の自由配置ボード</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&family=Yomogi&display=swap" rel="stylesheet">
 <style>
-body {
-  font-family: 'Inter', 'Noto Sans JP', sans-serif;
-  background-color: #f7fee7;
-  background-image: radial-gradient(#e2f5d3 1px, transparent 1px);
-  background-size: 20px 20px;
-  user-select: none;
-}
-.handwritten { font-family: 'Yomogi', 'Noto Sans JP', sans-serif; }
-.sticky-note {
-  transition: box-shadow 0.2s ease, transform 0.1s ease;
-  box-shadow: 3px 6px 15px rgba(0, 0, 0, 0.08);
-  cursor: grab;
-  touch-action: none;
-}
-.sticky-note:active {
-  cursor: grabbing;
-  transform: scale(1.02) rotate(0.5deg) !important;
-  box-shadow: 8px 16px 28px rgba(0, 0, 0, 0.15);
-  z-index: 100 !important;
-}
-.board-canvas {
-  min-height: 700px;
-  background-color: #ffffff;
-  background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px);
-  background-size: 24px 24px;
-  position: relative;
-}
-.board-canvas:fullscreen {
-  width: 100vw;
-  height: 100vh;
-  background-color: #ffffff;
-  background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px);
-  background-size: 24px 24px;
-  overflow: auto;
-  padding: 24px;
-}
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.02); }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+body { font-family:'Inter','Noto Sans JP',sans-serif; background-color:#f7fee7; background-image:radial-gradient(#e2f5d3 1px,transparent 1px); background-size:20px 20px; user-select:none; }
+.handwritten { font-family:'Yomogi','Noto Sans JP',sans-serif; }
+.sticky-note { transition:box-shadow 0.2s ease,transform 0.1s ease; box-shadow:3px 6px 15px rgba(0,0,0,0.08); cursor:grab; touch-action:none; }
+.sticky-note:active { cursor:grabbing; transform:scale(1.02) rotate(0.5deg) !important; box-shadow:8px 16px 28px rgba(0,0,0,0.15); z-index:100 !important; }
+.board-canvas { min-height:700px; background-color:#fff; background-image:radial-gradient(#e2e8f0 1.5px,transparent 1.5px); background-size:24px 24px; position:relative; }
+.board-canvas:fullscreen { width:100vw; height:100vh; overflow:auto; padding:24px; }
+::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.15); border-radius:999px; }
 </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -58,490 +28,466 @@ body {
 <header class="bg-white border-b border-lime-100 shadow-sm sticky top-0 z-40">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row justify-between items-center gap-4">
     <div class="flex items-center gap-3">
-      <div class="bg-lime-500 text-white p-2 rounded-2xl shadow-md shadow-lime-200">
-        <i class="fa-solid fa-note-sticky text-2xl"></i>
-      </div>
+      <div class="bg-lime-500 text-white p-2 rounded-2xl shadow-md shadow-lime-200"><i class="fa-solid fa-note-sticky text-2xl"></i></div>
       <div>
-        <h1 class="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
-          事実と解釈の自由配置ボード
-          <span class="text-xs font-normal bg-lime-100 text-lime-700 px-2.5 py-1 rounded-full">観察ナレッジ</span>
-        </h1>
-        <p class="text-xs text-slate-500 mt-0.5">児童生徒のありのままの事実と指導員の解釈を1枚の付箋にして自由に動かす</p>
+        <h1 class="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">事実と解釈の自由配置ボード<span class="text-xs font-normal bg-lime-100 text-lime-700 px-2.5 py-1 rounded-full">リアルタイム共同</span></h1>
+        <p class="text-xs text-slate-500 mt-0.5">児童生徒のありのままの事実と指導員の解釈を1枚の付箋にして、複数人で共同編集</p>
       </div>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <button onclick="openRecordModal()" class="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition shadow-md shadow-lime-100">
-        <i class="fa-solid fa-circle-plus"></i><span>新規記録を追加</span>
-      </button>
-      <button onclick="openStudentModal()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
-        <i class="fa-solid fa-users text-lime-600"></i><span>名簿管理</span>
-      </button>
-      <button onclick="exportCSV()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
-        <i class="fa-solid fa-file-csv text-emerald-600"></i><span>CSV出力</span>
-      </button>
-      <button onclick="openBackupModal()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm">
-        <i class="fa-solid fa-database text-indigo-600"></i><span>データ移行</span>
-      </button>
-      <button onclick="clearAllDataWithConfirm()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-medium transition">
-        <i class="fa-solid fa-trash-can"></i><span>全消去</span>
-      </button>
+      <button onclick="openRecordModal()" class="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition shadow-md shadow-lime-100"><i class="fa-solid fa-circle-plus"></i><span>新規記録を追加</span></button>
+      <button onclick="openStudentModal()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm"><i class="fa-solid fa-users text-lime-600"></i><span>名簿管理</span></button>
+      <button onclick="exportCSV()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm"><i class="fa-solid fa-file-csv text-emerald-600"></i><span>CSV出力</span></button>
+      <button onclick="openBackupModal()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition shadow-sm"><i class="fa-solid fa-database text-indigo-600"></i><span>データ移行</span></button>
+      <button onclick="clearAllDataWithConfirm()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-medium transition"><i class="fa-solid fa-trash-can"></i><span>全消去</span></button>
     </div>
   </div>
 </header>
+
+<div class="bg-gradient-to-r from-emerald-50 to-lime-50 border-b border-emerald-100">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-2 text-sm font-bold text-emerald-800"><i class="fa-solid fa-share-nodes"></i><span>共有ボード:</span></div>
+    <input type="text" id="boardIdInput" placeholder="ボード名 (例: kirari-2026)" class="flex-grow sm:flex-grow-0 sm:w-56 px-3 py-2 bg-white border border-emerald-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 transition" autocomplete="off">
+    <button onclick="connectBoard()" id="connectBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition flex items-center gap-1.5"><i class="fa-solid fa-plug"></i><span>接続</span></button>
+    <button onclick="disconnectBoard()" id="disconnectBtn" class="hidden bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold px-4 py-2 rounded-xl text-sm transition flex items-center gap-1.5"><i class="fa-solid fa-plug-circle-xmark"></i><span>切断</span></button>
+    <div class="text-xs font-semibold ml-auto flex items-center gap-2">
+      <span id="statusText" class="text-slate-500"><i class="fa-solid fa-circle text-slate-400 text-[8px]"></i> 未接続（この端末のみ保存）</span>
+      <span id="userCountDisplay" class="hidden text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full"><i class="fa-solid fa-users"></i> <strong id="userCountNum">1</strong>人接続中</span>
+    </div>
+  </div>
+</div>
 
 <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
   <section class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col gap-4">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
         <div class="relative flex-grow md:flex-grow-0 md:w-64">
-          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <i class="fa-solid fa-magnifying-glass text-sm"></i>
-          </span>
+          <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="fa-solid fa-magnifying-glass text-sm"></i></span>
           <input type="text" id="filterSearch" oninput="applyFilters()" placeholder="キーワードで検索..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 focus:bg-white transition">
         </div>
-        <div class="w-full sm:w-44">
-          <select id="filterStudent" onchange="applyFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 focus:bg-white transition">
-            <option value="">すべての児童生徒</option>
-          </select>
-        </div>
+        <div class="w-full sm:w-44"><select id="filterStudent" onchange="applyFilters()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 focus:bg-white transition"><option value="">すべての児童生徒</option></select></div>
       </div>
-      <div class="flex gap-4 text-xs font-semibold text-slate-500">
-        <span class="bg-slate-100 px-3 py-1.5 rounded-lg">登録総数: <strong id="statsCount" class="text-slate-800 text-sm">0</strong> 件</span>
-      </div>
+      <div class="flex gap-4 text-xs font-semibold text-slate-500"><span class="bg-slate-100 px-3 py-1.5 rounded-lg">登録総数: <strong id="statsCount" class="text-slate-800 text-sm">0</strong> 件</span></div>
     </div>
   </section>
 
   <div class="flex flex-col gap-4 w-full">
     <div class="bg-white/95 backdrop-blur px-5 py-3 rounded-2xl border border-lime-100 text-xs text-lime-800 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
-      <p class="flex items-center gap-2">
-        <i class="fa-solid fa-circle-info text-base text-lime-600 flex-shrink-0"></i>
-        <span>🖐️ <strong>操作方法:</strong> 付箋を<strong>ドラッグ移動</strong>、右下の角をドラッグして<strong>サイズ変更</strong>ができます。</span>
-      </p>
+      <p class="flex items-center gap-2"><i class="fa-solid fa-circle-info text-base text-lime-600 flex-shrink-0"></i><span>🖐️ <strong>操作:</strong> 付箋を<strong>ドラッグ移動</strong>、右下の角で<strong>サイズ変更</strong></span></p>
       <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-        <button onclick="alignStickyNotes()" class="bg-lime-50 hover:bg-lime-100 text-lime-700 border border-lime-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-table-cells-large"></i><span>きれいに整列する</span>
-        </button>
-        <button onclick="toggleFullscreen()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-expand"></i><span>全画面表示モード</span>
-        </button>
-        <button onclick="exportBoardPDF()" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-file-pdf"></i><span>PDFで書き出す</span>
-        </button>
+        <button onclick="alignStickyNotes()" class="bg-lime-50 hover:bg-lime-100 text-lime-700 border border-lime-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-table-cells-large"></i><span>きれいに整列</span></button>
+        <button onclick="toggleFullscreen()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-expand"></i><span>全画面</span></button>
+        <button onclick="exportBoardPDF()" class="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-2 rounded-xl font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-file-pdf"></i><span>PDF出力</span></button>
       </div>
     </div>
-
     <div class="bg-white p-3.5 rounded-2xl shadow-sm border border-slate-100">
-      <div class="text-xs font-semibold text-slate-500 mb-2.5 flex items-center gap-1.5">
-        <i class="fa-solid fa-calendar-days text-lime-600"></i><span>記録日で絞り込み:</span>
-      </div>
+      <div class="text-xs font-semibold text-slate-500 mb-2.5 flex items-center gap-1.5"><i class="fa-solid fa-calendar-days text-lime-600"></i><span>記録日で絞り込み:</span></div>
       <div id="dateTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-1"></div>
     </div>
-
     <div id="boardContainer" class="board-canvas rounded-3xl border border-slate-200/80 shadow-inner overflow-hidden w-full"></div>
   </div>
 </main>
 
-<!-- 新規記録 -->
 <div id="recordModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
   <div class="bg-white rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]">
-    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-lime-50/50">
-      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-        <i class="fa-solid fa-pen-to-square text-lime-600"></i>新しい活動の記録を追加
-      </h3>
-      <button onclick="closeRecordModal()" class="text-slate-400 hover:text-slate-600 transition text-xl"><i class="fa-solid fa-xmark"></i></button>
-    </div>
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-lime-50/50"><h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-lime-600"></i>新しい活動の記録を追加</h3><button onclick="closeRecordModal()" class="text-slate-400 hover:text-slate-600 transition text-xl"><i class="fa-solid fa-xmark"></i></button></div>
     <form id="recordForm" onsubmit="handleFormSubmit(event)" class="p-6 overflow-y-auto space-y-5">
       <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5">対象児童生徒 <span class="text-red-500">*</span></label>
-          <select id="formStudent" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition">
-            <option value="" disabled selected>選択してください</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5">記録日 <span class="text-red-500">*</span></label>
-          <input type="date" id="formDate" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition">
-        </div>
+        <div><label class="block text-xs font-bold text-slate-600 mb-1.5">対象児童生徒 <span class="text-red-500">*</span></label><select id="formStudent" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition"><option value="" disabled selected>選択してください</option></select></div>
+        <div><label class="block text-xs font-bold text-slate-600 mb-1.5">記録日 <span class="text-red-500">*</span></label><input type="date" id="formDate" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition"></div>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-600 mb-1.5">活動・場面名 <span class="text-slate-400 font-normal">(例: 5時間目算数、中休み等)</span></label>
-        <input type="text" id="formActivity" placeholder="例：昼休み、図工の協働制作" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition">
-      </div>
-      <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100/70">
-        <div class="flex items-center justify-between mb-2">
-          <label class="block text-xs font-bold text-blue-800 flex items-center gap-1">
-            <i class="fa-solid fa-magnifying-glass"></i>① 観察した事実 (Fact) <span class="text-red-500">*</span>
-          </label>
-          <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">客観的な出来事</span>
-        </div>
-        <textarea id="formFact" required rows="3" placeholder="実際に起こったこと、本人の発言や具体的な行動を客観的に記述します。主観や感想は含めません。" class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none transition placeholder-slate-400"></textarea>
-      </div>
-      <div class="bg-amber-50/50 p-4 rounded-xl border border-amber-100/70">
-        <div class="flex items-center justify-between mb-2">
-          <label class="block text-xs font-bold text-amber-800 flex items-center gap-1">
-            <i class="fa-solid fa-lightbulb"></i>② 指導員の解釈 (Interpretation) <span class="text-red-500">*</span>
-          </label>
-          <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">主観・推測・仮説</span>
-        </div>
-        <textarea id="formInterpretation" required rows="3" placeholder="事実から推測される心理、意図、今後のアプローチ仮説などを記述します。" class="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none transition placeholder-slate-400"></textarea>
-      </div>
-      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
-        <button type="button" onclick="closeRecordModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition">キャンセル</button>
-        <button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md shadow-lime-200 transition flex items-center gap-2 text-xs">
-          <i class="fa-solid fa-circle-plus"></i><span>記録ボードに貼る</span>
-        </button>
-      </div>
+      <div><label class="block text-xs font-bold text-slate-600 mb-1.5">活動・場面名</label><input type="text" id="formActivity" placeholder="例：昼休み、図工の協働制作" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-lime-400 focus:bg-white focus:outline-none transition"></div>
+      <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100/70"><div class="flex items-center justify-between mb-2"><label class="block text-xs font-bold text-blue-800 flex items-center gap-1"><i class="fa-solid fa-magnifying-glass"></i>① 観察した事実 (Fact) <span class="text-red-500">*</span></label><span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">客観的な出来事</span></div><textarea id="formFact" required rows="3" placeholder="実際に起こったこと、本人の発言や具体的な行動を客観的に記述します。" class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none transition placeholder-slate-400"></textarea></div>
+      <div class="bg-amber-50/50 p-4 rounded-xl border border-amber-100/70"><div class="flex items-center justify-between mb-2"><label class="block text-xs font-bold text-amber-800 flex items-center gap-1"><i class="fa-solid fa-lightbulb"></i>② 指導員の解釈 (Interpretation) <span class="text-red-500">*</span></label><span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold">主観・推測・仮説</span></div><textarea id="formInterpretation" required rows="3" placeholder="事実から推測される心理、意図、今後のアプローチ仮説などを記述します。" class="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm focus:ring-2 focus:ring-amber-400 focus:outline-none transition placeholder-slate-400"></textarea></div>
+      <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100"><button type="button" onclick="closeRecordModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition">キャンセル</button><button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-bold py-2.5 px-6 rounded-xl shadow-md shadow-lime-200 transition flex items-center gap-2 text-xs"><i class="fa-solid fa-circle-plus"></i><span>ボードに貼る</span></button></div>
     </form>
   </div>
 </div>
 
-<!-- 名簿 -->
 <div id="studentModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
   <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]">
-    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
-      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-gear text-lime-600"></i>児童生徒名簿の管理</h3>
-      <button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button>
-    </div>
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center"><h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-gear text-lime-600"></i>児童生徒名簿の管理</h3><button onclick="closeStudentModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="p-5 overflow-y-auto space-y-4">
-      <form id="studentAddForm" onsubmit="addStudent(event)" class="flex gap-2">
-        <input type="text" id="newStudentName" required placeholder="児童生徒の名前を入力..." class="flex-grow px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition">
-        <button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition flex items-center gap-1"><i class="fa-solid fa-plus"></i><span>追加</span></button>
-      </form>
-      <div>
-        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">登録生徒一覧</h4>
-        <ul id="studentList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto border border-slate-100 rounded-xl"></ul>
-      </div>
+      <form id="studentAddForm" onsubmit="addStudent(event)" class="flex gap-2"><input type="text" id="newStudentName" required placeholder="児童生徒の名前を入力..." class="flex-grow px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition"><button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition flex items-center gap-1"><i class="fa-solid fa-plus"></i><span>追加</span></button></form>
+      <div><h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">登録生徒一覧</h4><ul id="studentList" class="divide-y divide-slate-100 max-h-60 overflow-y-auto border border-slate-100 rounded-xl"></ul></div>
     </div>
-    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-      <button onclick="closeStudentModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">閉じる</button>
-    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end"><button onclick="closeStudentModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">閉じる</button></div>
   </div>
 </div>
 
-<!-- バックアップ -->
 <div id="backupModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
   <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
-    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
-      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-database text-indigo-600"></i>データ移行（インポート／エクスポート）</h3>
-      <button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button>
-    </div>
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center"><h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-database text-indigo-600"></i>データ移行</h3><button onclick="closeBackupModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button></div>
     <div class="p-5 space-y-4 text-sm">
-      <p class="text-xs text-slate-500">データを他の端末へ移動、またはバックアップに使用します。</p>
-      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
-        <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-1.5 text-xs"><i class="fa-solid fa-download text-indigo-500"></i>データをエクスポート（JSON形式）</h4>
-        <p class="text-xs text-slate-500 mb-3">現在のすべての生徒データと記録データをファイルとして保存します。</p>
-        <button onclick="exportDataJSON()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-xs transition inline-flex items-center gap-1.5"><i class="fa-solid fa-file-arrow-down"></i> バックアップファイルをダウンロード</button>
-      </div>
-      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
-        <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-1.5 text-xs"><i class="fa-solid fa-upload text-amber-500"></i>データをインポート（復元）</h4>
-        <p class="text-xs text-slate-500 mb-3 text-red-600">⚠️ 注意：インポートを実行すると、現在のデータは上書きされます。</p>
-        <div class="flex items-center gap-2">
-          <input type="file" id="importFile" accept=".json" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
-          <button onclick="importDataJSON()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex-shrink-0">適用する</button>
-        </div>
-      </div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200"><h4 class="font-bold text-slate-700 mb-2 flex items-center gap-1.5 text-xs"><i class="fa-solid fa-download text-indigo-500"></i>データをエクスポート（JSON）</h4><p class="text-xs text-slate-500 mb-3">現在のすべての生徒と記録データを保存します。</p><button onclick="exportDataJSON()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-xs transition inline-flex items-center gap-1.5"><i class="fa-solid fa-file-arrow-down"></i> ダウンロード</button></div>
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200"><h4 class="font-bold text-slate-700 mb-2 flex items-center gap-1.5 text-xs"><i class="fa-solid fa-upload text-amber-500"></i>データをインポート</h4><p class="text-xs text-slate-500 mb-3 text-red-600">⚠️ 現在のデータは上書きされます。</p><div class="flex items-center gap-2"><input type="file" id="importFile" accept=".json" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"><button onclick="importDataJSON()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition flex-shrink-0">適用</button></div></div>
     </div>
-    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-      <button onclick="closeBackupModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">閉じる</button>
-    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end"><button onclick="closeBackupModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">閉じる</button></div>
   </div>
 </div>
 
-<!-- 編集 -->
 <div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
   <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden max-h-[90vh]">
-    <div class="p-5 border-b border-slate-100 flex justify-between items-center">
-      <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-lime-600"></i>記録の編集</h3>
-      <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button>
-    </div>
+    <div class="p-5 border-b border-slate-100 flex justify-between items-center"><h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-lime-600"></i>記録の編集</h3><button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 transition text-lg"><i class="fa-solid fa-xmark"></i></button></div>
     <form id="editForm" onsubmit="handleEditSubmit(event)" class="p-5 overflow-y-auto space-y-4">
       <input type="hidden" id="editRecordId">
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">対象児童生徒</label>
-          <select id="editStudent" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition"></select>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1">記録日</label>
-          <input type="date" id="editDate" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition">
-        </div>
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 mb-1">活動・場面名</label>
-        <input type="text" id="editActivity" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition">
-      </div>
-      <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
-        <label class="block text-xs font-bold text-blue-800 mb-1">事実 (Fact)</label>
-        <textarea id="editFact" required rows="3" class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"></textarea>
-      </div>
-      <div class="bg-amber-50/50 p-3 rounded-xl border border-amber-100">
-        <label class="block text-xs font-bold text-amber-800 mb-1">指導員の解釈 (Interpretation)</label>
-        <textarea id="editInterpretation" required rows="3" class="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition"></textarea>
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" onclick="closeEditModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">キャンセル</button>
-        <button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-semibold px-5 py-2 rounded-xl text-xs transition">保存する</button>
-      </div>
+      <div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-semibold text-slate-500 mb-1">対象児童生徒</label><select id="editStudent" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition"></select></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">記録日</label><input type="date" id="editDate" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition"></div></div>
+      <div><label class="block text-xs font-semibold text-slate-500 mb-1">活動・場面名</label><input type="text" id="editActivity" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-lime-400 transition"></div>
+      <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-100"><label class="block text-xs font-bold text-blue-800 mb-1">事実 (Fact)</label><textarea id="editFact" required rows="3" class="w-full p-2.5 bg-white border border-blue-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"></textarea></div>
+      <div class="bg-amber-50/50 p-3 rounded-xl border border-amber-100"><label class="block text-xs font-bold text-amber-800 mb-1">指導員の解釈 (Interpretation)</label><textarea id="editInterpretation" required rows="3" class="w-full p-2.5 bg-white border border-amber-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 transition"></textarea></div>
+      <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="closeEditModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">キャンセル</button><button type="submit" class="bg-lime-600 hover:bg-lime-700 text-white font-semibold px-5 py-2 rounded-xl text-xs transition">保存</button></div>
     </form>
   </div>
 </div>
 
-<!-- 確認ダイアログ -->
 <div id="customConfirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
   <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
-    <div class="p-5 border-b border-slate-100 flex items-center gap-2.5">
-      <div class="bg-amber-50 text-amber-600 p-2 rounded-lg" id="confirmIconContainer">
-        <i id="confirmIcon" class="fa-solid fa-circle-question text-lg"></i>
-      </div>
-      <h3 class="text-base font-bold text-slate-800">実行確認</h3>
-    </div>
+    <div class="p-5 border-b border-slate-100 flex items-center gap-2.5"><div class="bg-amber-50 text-amber-600 p-2 rounded-lg" id="confirmIconContainer"><i id="confirmIcon" class="fa-solid fa-circle-question text-lg"></i></div><h3 class="text-base font-bold text-slate-800">実行確認</h3></div>
     <div class="p-5 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed" id="confirmMessage"></div>
-    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
-      <button id="confirmCancelBtn" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold px-4 py-2 rounded-xl text-xs transition">キャンセル</button>
-      <button id="confirmOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">実行する</button>
-    </div>
+    <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2"><button id="confirmCancelBtn" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-semibold px-4 py-2 rounded-xl text-xs transition">キャンセル</button><button id="confirmOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">実行</button></div>
   </div>
 </div>
 
-<div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm">
-  <i id="toastIcon" class="fa-solid fa-circle-check text-lime-400"></i>
-  <span id="toastMessage">メッセージ</span>
-</div>
+<div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 text-sm"><i id="toastIcon" class="fa-solid fa-circle-check text-lime-400"></i><span id="toastMessage">メッセージ</span></div>
 
-<footer class="bg-white border-t border-slate-100 mt-auto py-6">
-  <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-    <p>© 2026 事実と解釈の記録ボード</p>
-  </div>
-</footer>
+<footer class="bg-white border-t border-slate-100 mt-auto py-6"><div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400"><p>© 2026 事実と解釈の記録ボード</p></div></footer>
 
 <script>
+// ===== Firebase =====
+const firebaseConfig = {
+  apiKey: "AIzaSyA2-Q4fUqfXKwReTpIwGj-NBGIu1B2KDTU",
+  authDomain: "jijitsu-kaishaku.firebaseapp.com",
+  databaseURL: "https://jijitsu-kaishaku-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "jijitsu-kaishaku",
+  storageBucket: "jijitsu-kaishaku.firebasestorage.app",
+  messagingSenderId: "177836377525",
+  appId: "1:177836377525:web:bb45feb4c7422c65c245fc"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let boardId = null, boardRef = null, studentsRef = null, recordsRef = null, presenceListRef = null, myPresenceRef = null;
+let isConnected = false;
+let pendingRender = false;
+
+// ===== Defaults =====
 const DEFAULT_STUDENTS = [
-  { id: "s-1", name: "佐藤 陸 (りく)" },
-  { id: "s-2", name: "鈴木 芽依 (めい)" },
-  { id: "s-3", name: "高橋 蓮 (れん)" },
-  { id: "s-4", name: "田中 結菜 (ゆいな)" }
+  { id:"s-1", name:"佐藤 陸 (りく)" },
+  { id:"s-2", name:"鈴木 芽依 (めい)" },
+  { id:"s-3", name:"高橋 蓮 (れん)" },
+  { id:"s-4", name:"田中 結菜 (ゆいな)" }
 ];
 const DEFAULT_RECORDS = [
-  { id: "rec-1", studentId: "s-1", date: "2026-05-18", activity: "5時間目 算数のグループワーク",
-    fact: "図形問題の解き方を考える時間、自分から口を開かず鉄筆を回して外を見ていたが、隣の鈴木さんが「ここどうやる？」と聞くと、自分のノートを見せて「これね、ここを半分にするんだよ」と小さな声で教え始めた。",
-    interpretation: "自分から輪に入るのが苦手な内向的な面がある。しかし、他者から明確に求められると、実は確かな知識を持っており丁寧に教えることができる。",
-    x: 10, y: 12, w: 320, h: 280 },
-  { id: "rec-2", studentId: "s-2", date: "2026-05-19", activity: "中休みのドッジボール",
-    fact: "ボールが体に当たりアウトになった際、「当たってない！あいつの投げ方は反則だ！」と大声で主張し、地面を強く蹴ってその場から走り去り、体育館裏で体育座りをしていた。",
-    interpretation: "ルールに対する完璧主義や、負け・ミスを受け入れる自己受容の弱さが見られる。感情の起伏が急激に高まった際、他罰的な言動をとってしまう。",
-    x: 52, y: 15, w: 320, h: 280 },
-  { id: "rec-3", studentId: "s-3", date: "2026-05-20", activity: "朝の会・スピーチ",
-    fact: "週末の出来事の発表にて、自ら挨手して一番に登壇した。「おじいちゃんの家で犬を触ったのが楽しかったです」と、クラス全員に向けて話し、質問にも2問ハキハキと答えた。",
-    interpretation: "自己表現に対するモチベーションが非常に高く、成功体験を積んでいる。クラス全体が温かく聞いてくれるという安心感を持っている様子。",
-    x: 30, y: 40, w: 320, h: 280 }
+  { id:"rec-1", studentId:"s-1", date:"2026-05-18", activity:"5時間目 算数のグループワーク", fact:"図形問題を考える時間、鈴木さんに「ここどうやる？」と聞かれ、ノートを見せて「ここを半分にするんだよ」と小さな声で教えた。", interpretation:"他者から明確に求められると、確かな知識を丁寧に教えることができる。", x:10, y:12, w:320, h:280 },
+  { id:"rec-2", studentId:"s-2", date:"2026-05-19", activity:"中休みのドッジボール", fact:"ボールが体に当たりアウトになった際、「当たってない！」と大声で主張し、走り去り体育館裏で体育座りをしていた。", interpretation:"ルールに対する完璧主義と、負けを受け入れる自己受容の弱さが見られる。", x:52, y:15, w:320, h:280 },
+  { id:"rec-3", studentId:"s-3", date:"2026-05-20", activity:"朝の会・スピーチ", fact:"週末の出来事の発表にて、自ら挨手して一番に登壇し、質問にも2問ハキハキと答えた。", interpretation:"自己表現のモチベーションが高く、クラスへの安心感を持っている。", x:30, y:40, w:320, h:280 }
 ];
 
 let students = [];
 let records = [];
 let selectedDateTab = "all";
 
+// ===== Utilities =====
 function showToast(message, type="success") {
-  const toast = document.getElementById("toast");
-  const toastMsg = document.getElementById("toastMessage");
-  const toastIcon = document.getElementById("toastIcon");
-  toastMsg.innerText = message;
-  if (type === "success") toastIcon.className = "fa-solid fa-circle-check text-lime-400";
-  else if (type === "info") toastIcon.className = "fa-solid fa-circle-info text-blue-400";
-  else toastIcon.className = "fa-solid fa-triangle-exclamation text-red-400";
-  toast.classList.remove("translate-y-20", "opacity-0");
-  toast.classList.add("translate-y-0", "opacity-100");
-  setTimeout(() => {
-    toast.classList.remove("translate-y-0", "opacity-100");
-    toast.classList.add("translate-y-20", "opacity-0");
-  }, 3000);
+  const t = document.getElementById("toast");
+  const m = document.getElementById("toastMessage");
+  const i = document.getElementById("toastIcon");
+  m.innerText = message;
+  i.className = type==="success" ? "fa-solid fa-circle-check text-lime-400" : type==="info" ? "fa-solid fa-circle-info text-blue-400" : "fa-solid fa-triangle-exclamation text-red-400";
+  t.classList.remove("translate-y-20","opacity-0");
+  t.classList.add("translate-y-0","opacity-100");
+  setTimeout(()=>{ t.classList.remove("translate-y-0","opacity-100"); t.classList.add("translate-y-20","opacity-0"); }, 3000);
+}
+function escapeHtml(s) {
+  if (typeof s !== 'string') return s;
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-function loadData() {
-  const storedStudents = localStorage.getItem("observation_students_v2");
-  const storedRecords = localStorage.getItem("observation_records_v2");
-  if (storedStudents) students = JSON.parse(storedStudents);
+// ===== Persistence =====
+function loadLocalData() {
+  const ss = localStorage.getItem("observation_students_v2");
+  const rs = localStorage.getItem("observation_records_v2");
+  if (ss) students = JSON.parse(ss);
   else { students = [...DEFAULT_STUDENTS]; localStorage.setItem("observation_students_v2", JSON.stringify(students)); }
-  if (storedRecords) records = JSON.parse(storedRecords);
+  if (rs) records = JSON.parse(rs);
   else { records = [...DEFAULT_RECORDS]; localStorage.setItem("observation_records_v2", JSON.stringify(records)); }
 }
-function saveData() {
+function saveLocalData() {
   localStorage.setItem("observation_students_v2", JSON.stringify(students));
   localStorage.setItem("observation_records_v2", JSON.stringify(records));
 }
+function writeStudent(s) { if (isConnected) studentsRef.child(s.id).set(s); else saveLocalData(); }
+function deleteStudentRemote(id) { if (isConnected) studentsRef.child(id).remove(); else saveLocalData(); }
+function writeRecord(r) { if (isConnected) recordsRef.child(r.id).set(r); else saveLocalData(); }
+function deleteRecordRemote(id) { if (isConnected) recordsRef.child(id).remove(); else saveLocalData(); }
+function updateRecordRemote(id, updates) { if (isConnected) recordsRef.child(id).update(updates); else saveLocalData(); }
+function bulkWriteRecords(arr) {
+  if (isConnected) {
+    const obj = {}; arr.forEach(r => obj[r.id] = r);
+    recordsRef.set(Object.keys(obj).length ? obj : null);
+  } else saveLocalData();
+}
+function bulkWriteStudents(arr) {
+  if (isConnected) {
+    const obj = {}; arr.forEach(s => obj[s.id] = s);
+    studentsRef.set(Object.keys(obj).length ? obj : null);
+  } else saveLocalData();
+}
 
+// ===== Firebase Connection =====
+async function connectBoard() {
+  const input = document.getElementById("boardIdInput");
+  const name = input.value.trim();
+  if (!name || !/^[a-zA-Z0-9_-]{4,40}$/.test(name)) {
+    showToast("ボード名は4～40文字の半角英数・ハイフン・アンダースコアにしてください", "error");
+    return;
+  }
+  try {
+    boardId = name;
+    boardRef = db.ref("boards/" + boardId);
+    studentsRef = boardRef.child("students");
+    recordsRef = boardRef.child("records");
+    presenceListRef = boardRef.child("presence");
+
+    // Check if board is empty -> seed defaults
+    const snap = await boardRef.once("value");
+    const existing = snap.val() || {};
+    const hasStudents = existing.students && Object.keys(existing.students).length > 0;
+    const hasRecords = existing.records && Object.keys(existing.records).length > 0;
+    if (!hasStudents && !hasRecords) {
+      const sObj = {}, rObj = {};
+      DEFAULT_STUDENTS.forEach(s => sObj[s.id] = s);
+      DEFAULT_RECORDS.forEach(r => rObj[r.id] = r);
+      await studentsRef.set(sObj);
+      await recordsRef.set(rObj);
+    }
+
+    // Subscribe
+    studentsRef.on("value", (snap) => {
+      const val = snap.val() || {};
+      students = Object.values(val);
+      updateStudentDropdowns();
+      if (document.getElementById("studentModal").classList.contains("flex")) renderStudentList();
+      safeRender();
+    });
+    recordsRef.on("value", (snap) => {
+      const val = snap.val() || {};
+      records = Object.values(val);
+      renderDateTabs();
+      safeRender();
+    });
+
+    // Presence
+    myPresenceRef = presenceListRef.push();
+    myPresenceRef.onDisconnect().remove();
+    await myPresenceRef.set({ joined: Date.now() });
+    presenceListRef.on("value", (snap) => {
+      const count = snap.numChildren() || 1;
+      document.getElementById("userCountNum").innerText = count;
+    });
+
+    isConnected = true;
+    localStorage.setItem("observation_board_id", boardId);
+    document.getElementById("connectBtn").classList.add("hidden");
+    document.getElementById("disconnectBtn").classList.remove("hidden");
+    document.getElementById("statusText").innerHTML = '<i class="fa-solid fa-circle text-emerald-500 text-[8px]"></i> 接続中: <strong>' + escapeHtml(boardId) + '</strong>';
+    document.getElementById("userCountDisplay").classList.remove("hidden");
+    input.disabled = true;
+    showToast("ボード \"" + boardId + "\" に接続しました");
+  } catch (err) {
+    console.error(err);
+    showToast("接続に失敗しました: " + err.message, "error");
+    isConnected = false;
+  }
+}
+function disconnectBoard() {
+  if (studentsRef) studentsRef.off();
+  if (recordsRef) recordsRef.off();
+  if (presenceListRef) presenceListRef.off();
+  if (myPresenceRef) myPresenceRef.remove();
+  isConnected = false;
+  boardId = null;
+  localStorage.removeItem("observation_board_id");
+  document.getElementById("connectBtn").classList.remove("hidden");
+  document.getElementById("disconnectBtn").classList.add("hidden");
+  document.getElementById("statusText").innerHTML = '<i class="fa-solid fa-circle text-slate-400 text-[8px]"></i> 未接続（この端末のみ保存）';
+  document.getElementById("userCountDisplay").classList.add("hidden");
+  document.getElementById("boardIdInput").disabled = false;
+  loadLocalData();
+  updateStudentDropdowns();
+  renderDateTabs();
+  renderBoards();
+  showToast("ボードを切断しました", "info");
+}
+function safeRender() {
+  if (draggedElement || resizingElement) { pendingRender = true; return; }
+  renderBoards();
+}
+
+// ===== Date Tabs =====
 function renderDateTabs() {
-  const container = document.getElementById("dateTabsContainer");
-  if (!container) return;
-  const dates = [...new Set(records.map(r => r.date))].sort((a, b) => new Date(b) - new Date(a));
+  const c = document.getElementById("dateTabsContainer");
+  if (!c) return;
+  const dates = [...new Set(records.map(r => r.date))].sort((a,b) => new Date(b) - new Date(a));
   if (selectedDateTab !== "all" && !dates.includes(selectedDateTab)) selectedDateTab = "all";
   let html = "";
-  const allCount = records.length;
   const allActive = selectedDateTab === "all";
-  html += `<button type="button" onclick="changeDateTab('all')" class="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${allActive ? 'bg-lime-600 text-white shadow-md shadow-lime-100' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'}"><span>すべての日程</span><span class="text-[10px] px-1.5 py-0.5 rounded-full ${allActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'} font-bold">${allCount}</span></button>`;
+  html += `<button type="button" onclick="changeDateTab('all')" class="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${allActive?'bg-lime-600 text-white shadow-md shadow-lime-100':'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'}"><span>すべての日程</span><span class="text-[10px] px-1.5 py-0.5 rounded-full ${allActive?'bg-white/20 text-white':'bg-slate-200 text-slate-500'} font-bold">${records.length}</span></button>`;
   dates.forEach(date => {
     const count = records.filter(r => r.date === date).length;
     const isActive = selectedDateTab === date;
-    const label = formatDateLabel(date);
-    html += `<button type="button" onclick="changeDateTab('${date}')" class="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${isActive ? 'bg-lime-600 text-white shadow-md shadow-lime-100' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'}"><span>${label}</span><span class="text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'} font-bold">${count}</span></button>`;
+    html += `<button type="button" onclick="changeDateTab('${date}')" class="flex-shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${isActive?'bg-lime-600 text-white shadow-md shadow-lime-100':'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'}"><span>${formatDateLabel(date)}</span><span class="text-[10px] px-1.5 py-0.5 rounded-full ${isActive?'bg-white/20 text-white':'bg-slate-200 text-slate-500'} font-bold">${count}</span></button>`;
   });
-  container.innerHTML = html;
+  c.innerHTML = html;
 }
-function changeDateTab(date) { selectedDateTab = date; renderDateTabs(); renderBoards(); }
-function formatDateLabel(dateStr) {
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const dow = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
-    return `${d.getMonth() + 1}/${d.getDate()}(${dow})`;
-  } catch (e) { return dateStr; }
+function changeDateTab(d) { selectedDateTab = d; renderDateTabs(); renderBoards(); }
+function formatDateLabel(s) {
+  try { const d = new Date(s); if (isNaN(d.getTime())) return s;
+    return (d.getMonth()+1) + "/" + d.getDate() + "(" + ["日","月","火","水","木","金","土"][d.getDay()] + ")";
+  } catch(e) { return s; }
 }
 
-function showCustomConfirm(message, isDanger = false) {
+// ===== Confirm Dialog =====
+function showCustomConfirm(message, isDanger=false) {
   return new Promise((resolve) => {
     const modal = document.getElementById("customConfirmModal");
-    const msgEl = document.getElementById("confirmMessage");
-    const okBtn = document.getElementById("confirmOkBtn");
-    const cancelBtn = document.getElementById("confirmCancelBtn");
+    const msg = document.getElementById("confirmMessage");
+    const ok = document.getElementById("confirmOkBtn");
+    const cancel = document.getElementById("confirmCancelBtn");
     const icon = document.getElementById("confirmIcon");
-    const iconContainer = document.getElementById("confirmIconContainer");
-    msgEl.innerText = message;
+    const ic = document.getElementById("confirmIconContainer");
+    msg.innerText = message;
     if (isDanger) {
-      okBtn.className = "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm";
+      ok.className = "bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm";
       icon.className = "fa-solid fa-triangle-exclamation text-lg";
-      iconContainer.className = "bg-red-50 text-red-600 p-2 rounded-lg";
+      ic.className = "bg-red-50 text-red-600 p-2 rounded-lg";
     } else {
-      okBtn.className = "bg-lime-600 hover:bg-lime-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm";
+      ok.className = "bg-lime-600 hover:bg-lime-700 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm";
       icon.className = "fa-solid fa-circle-question text-lg";
-      iconContainer.className = "bg-amber-50 text-amber-600 p-2 rounded-lg";
+      ic.className = "bg-amber-50 text-amber-600 p-2 rounded-lg";
     }
     modal.classList.remove("hidden"); modal.classList.add("flex");
     const handleOk = () => { cleanup(); resolve(true); };
     const handleCancel = () => { cleanup(); resolve(false); };
     const cleanup = () => {
       modal.classList.remove("flex"); modal.classList.add("hidden");
-      okBtn.removeEventListener("click", handleOk);
-      cancelBtn.removeEventListener("click", handleCancel);
+      ok.removeEventListener("click", handleOk);
+      cancel.removeEventListener("click", handleCancel);
     };
-    okBtn.addEventListener("click", handleOk);
-    cancelBtn.addEventListener("click", handleCancel);
+    ok.addEventListener("click", handleOk);
+    cancel.addEventListener("click", handleCancel);
   });
 }
 
+// ===== Init =====
 window.onload = function() {
-  loadData();
+  loadLocalData();
   document.getElementById("formDate").value = new Date().toISOString().split('T')[0];
   updateStudentDropdowns();
   renderDateTabs();
   renderBoards();
   setupGlobalDragListeners();
+  // Auto-connect if last boardId saved
+  const savedBoardId = localStorage.getItem("observation_board_id");
+  if (savedBoardId) {
+    document.getElementById("boardIdInput").value = savedBoardId;
+    setTimeout(() => connectBoard(), 300);
+  }
 };
 
 function updateStudentDropdowns() {
-  const filterSelect = document.getElementById("filterStudent");
-  const formSelect = document.getElementById("formStudent");
-  const editSelect = document.getElementById("editStudent");
-  filterSelect.innerHTML = '<option value="">すべての児童生徒</option>';
-  formSelect.innerHTML = '<option value="" disabled selected>選択してください</option>';
-  editSelect.innerHTML = '';
-  students.forEach(student => {
-    [filterSelect, formSelect, editSelect].forEach(sel => {
+  const f = document.getElementById("filterStudent");
+  const fo = document.getElementById("formStudent");
+  const e = document.getElementById("editStudent");
+  const currentFilter = f.value;
+  f.innerHTML = '<option value="">すべての児童生徒</option>';
+  fo.innerHTML = '<option value="" disabled selected>選択してください</option>';
+  e.innerHTML = '';
+  students.forEach(st => {
+    [f, fo, e].forEach(sel => {
       const opt = document.createElement("option");
-      opt.value = student.id;
-      opt.textContent = student.name;
+      opt.value = st.id; opt.textContent = st.name;
       sel.appendChild(opt);
     });
   });
+  if (currentFilter) f.value = currentFilter;
 }
 
-function openRecordModal() {
-  document.getElementById("recordModal").classList.remove("hidden");
-  document.getElementById("recordModal").classList.add("flex");
-}
-function closeRecordModal() {
-  document.getElementById("recordModal").classList.remove("flex");
-  document.getElementById("recordModal").classList.add("hidden");
-}
+function openRecordModal() { document.getElementById("recordModal").classList.remove("hidden"); document.getElementById("recordModal").classList.add("flex"); }
+function closeRecordModal() { document.getElementById("recordModal").classList.remove("flex"); document.getElementById("recordModal").classList.add("hidden"); }
 
+// ===== Drag & Resize =====
 let draggedElement = null, dragOffsetX = 0, dragOffsetY = 0;
 let resizingElement = null, resizeStartWidth = 0, resizeStartHeight = 0, resizeStartX = 0, resizeStartY = 0;
-
-function startDrag(e, elementId) {
+function startDrag(e, id) {
   if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input') || e.target.closest('.resize-handle')) return;
-  const element = document.getElementById(elementId);
-  if (!element) return;
-  draggedElement = element;
-  element.style.zIndex = "100";
-  const rect = element.getBoundingClientRect();
-  const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-  const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-  dragOffsetX = clientX - rect.left;
-  dragOffsetY = clientY - rect.top;
+  const el = document.getElementById(id); if (!el) return;
+  draggedElement = el; el.style.zIndex = "100";
+  const rect = el.getBoundingClientRect();
+  const cx = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+  const cy = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+  dragOffsetX = cx - rect.left; dragOffsetY = cy - rect.top;
   e.preventDefault();
 }
-function startResize(e, elementId) {
+function startResize(e, id) {
   e.stopPropagation(); e.preventDefault();
-  const element = document.getElementById(elementId);
-  if (!element) return;
-  resizingElement = element;
-  element.style.zIndex = "100";
-  const rect = element.getBoundingClientRect();
-  resizeStartWidth = rect.width;
-  resizeStartHeight = rect.height;
+  const el = document.getElementById(id); if (!el) return;
+  resizingElement = el; el.style.zIndex = "100";
+  const r = el.getBoundingClientRect();
+  resizeStartWidth = r.width; resizeStartHeight = r.height;
   resizeStartX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
   resizeStartY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
 }
 function setupGlobalDragListeners() {
   const handleMove = (e) => {
     if (resizingElement) {
-      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-      let newWidth = resizeStartWidth + (clientX - resizeStartX);
-      let newHeight = resizeStartHeight + (clientY - resizeStartY);
-      if (newWidth < 220) newWidth = 220;
-      if (newHeight < 180) newHeight = 180;
-      const boardRect = document.getElementById("boardContainer").getBoundingClientRect();
-      if (newWidth > boardRect.width) newWidth = boardRect.width;
-      if (newHeight > boardRect.height) newHeight = boardRect.height;
-      resizingElement.style.width = `${newWidth}px`;
-      resizingElement.style.height = `${newHeight}px`;
-      e.preventDefault();
-      return;
+      const cx = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+      const cy = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+      let nw = resizeStartWidth + (cx - resizeStartX);
+      let nh = resizeStartHeight + (cy - resizeStartY);
+      if (nw < 220) nw = 220; if (nh < 180) nh = 180;
+      const br = document.getElementById("boardContainer").getBoundingClientRect();
+      if (nw > br.width) nw = br.width; if (nh > br.height) nh = br.height;
+      resizingElement.style.width = nw + "px";
+      resizingElement.style.height = nh + "px";
+      e.preventDefault(); return;
     }
     if (!draggedElement) return;
-    const boardRect = document.getElementById("boardContainer").getBoundingClientRect();
-    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
-    let newLeft = clientX - boardRect.left - dragOffsetX;
-    let newTop = clientY - boardRect.top - dragOffsetY;
+    const br = document.getElementById("boardContainer").getBoundingClientRect();
+    const cx = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const cy = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+    let nl = cx - br.left - dragOffsetX;
+    let nt = cy - br.top - dragOffsetY;
     const cw = draggedElement.offsetWidth, ch = draggedElement.offsetHeight;
-    if (newLeft < 0) newLeft = 0;
-    if (newTop < 0) newTop = 0;
-    if (newLeft > boardRect.width - cw) newLeft = boardRect.width - cw;
-    if (newTop > boardRect.height - ch) newTop = boardRect.height - ch;
-    const px = (newLeft / boardRect.width) * 100;
-    const py = (newTop / boardRect.height) * 100;
-    draggedElement.style.left = `${px}%`;
-    draggedElement.style.top = `${py}%`;
+    if (nl < 0) nl = 0; if (nt < 0) nt = 0;
+    if (nl > br.width - cw) nl = br.width - cw;
+    if (nt > br.height - ch) nt = br.height - ch;
+    draggedElement.style.left = ((nl/br.width)*100) + "%";
+    draggedElement.style.top = ((nt/br.height)*100) + "%";
   };
   const handleEnd = () => {
     if (resizingElement) {
-      const id = resizingElement.id.replace('note-', '');
+      const id = resizingElement.id.replace('note-','');
       const i = records.findIndex(r => r.id === id);
-      if (i !== -1) { records[i].w = resizingElement.offsetWidth; records[i].h = resizingElement.offsetHeight; saveData(); }
+      if (i !== -1) {
+        records[i].w = resizingElement.offsetWidth;
+        records[i].h = resizingElement.offsetHeight;
+        updateRecordRemote(id, { w: records[i].w, h: records[i].h });
+      }
       resizingElement.style.zIndex = "10";
       resizingElement = null;
     }
     if (draggedElement) {
-      const id = draggedElement.id.replace('note-', '');
+      const id = draggedElement.id.replace('note-','');
       const i = records.findIndex(r => r.id === id);
       if (i !== -1) {
         records[i].x = parseFloat(draggedElement.style.left);
         records[i].y = parseFloat(draggedElement.style.top);
-        saveData();
+        updateRecordRemote(id, { x: records[i].x, y: records[i].y });
       }
       draggedElement.style.zIndex = "10";
       draggedElement = null;
     }
+    if (pendingRender) { pendingRender = false; renderBoards(); }
   };
   document.addEventListener('mousemove', handleMove);
   document.addEventListener('mouseup', handleEnd);
@@ -550,180 +496,149 @@ function setupGlobalDragListeners() {
   window.addEventListener('resize', adjustNotesOnResize);
 }
 function adjustNotesOnResize() {
-  const board = document.getElementById("boardContainer");
-  if (!board) return;
-  const boardRect = board.getBoundingClientRect();
+  const b = document.getElementById("boardContainer");
+  if (!b) return;
+  const br = b.getBoundingClientRect();
   records.forEach(rec => {
-    const note = document.getElementById(`note-${rec.id}`);
-    if (!note) return;
-    let leftPx = (rec.x / 100) * boardRect.width;
-    let topPx = (rec.y / 100) * boardRect.height;
-    if (leftPx + note.offsetWidth > boardRect.width) leftPx = boardRect.width - note.offsetWidth;
-    if (leftPx < 0) leftPx = 0;
-    if (topPx + note.offsetHeight > boardRect.height) topPx = boardRect.height - note.offsetHeight;
-    if (topPx < 0) topPx = 0;
-    rec.x = (leftPx / boardRect.width) * 100;
-    rec.y = (topPx / boardRect.height) * 100;
-    note.style.left = `${rec.x}%`;
-    note.style.top = `${rec.y}%`;
+    const n = document.getElementById("note-"+rec.id);
+    if (!n) return;
+    let lx = (rec.x/100)*br.width, ty = (rec.y/100)*br.height;
+    if (lx + n.offsetWidth > br.width) lx = br.width - n.offsetWidth;
+    if (lx < 0) lx = 0;
+    if (ty + n.offsetHeight > br.height) ty = br.height - n.offsetHeight;
+    if (ty < 0) ty = 0;
+    rec.x = (lx/br.width)*100; rec.y = (ty/br.height)*100;
+    n.style.left = rec.x + "%"; n.style.top = rec.y + "%";
   });
-  saveData();
+  if (!isConnected) saveLocalData();
 }
 
 function alignStickyNotes() {
-  const board = document.getElementById("boardContainer");
-  const boardWidth = board.offsetWidth;
-  const notes = Array.from(board.querySelectorAll('.sticky-note'));
+  const b = document.getElementById("boardContainer");
+  const bw = b.offsetWidth;
+  const notes = Array.from(b.querySelectorAll('.sticky-note'));
   if (notes.length === 0) return;
-  let cols = 3;
-  if (boardWidth < 640) cols = 1;
-  else if (boardWidth < 1024) cols = 2;
+  let cols = 3; if (bw < 640) cols = 1; else if (bw < 1024) cols = 2;
   const px = 4, py = 5;
-  const cwp = (100 - (px * (cols + 1))) / cols;
-  const chp = 25;
-  notes.forEach((note, index) => {
-    const col = index % cols;
-    const row = Math.floor(index / cols);
-    const x = px + col * (cwp + px);
-    const y = py + row * (chp + py);
-    note.style.transition = "all 0.5s cubic-bezier(0.16, 1, 0.3, 1)";
-    note.style.left = `${x}%`;
-    note.style.top = `${y}%`;
-    const id = note.id.replace('note-', '');
-    const i = records.findIndex(r => r.id === id);
-    if (i !== -1) { records[i].x = x; records[i].y = y; }
-    setTimeout(() => { note.style.transition = ""; }, 500);
+  const cwp = (100 - px*(cols+1))/cols, chp = 25;
+  const updates = {};
+  notes.forEach((n, idx) => {
+    const c = idx % cols, r = Math.floor(idx/cols);
+    const x = px + c*(cwp+px), y = py + r*(chp+py);
+    n.style.transition = "all 0.5s cubic-bezier(0.16,1,0.3,1)";
+    n.style.left = x + "%"; n.style.top = y + "%";
+    const id = n.id.replace('note-','');
+    const i = records.findIndex(rr => rr.id === id);
+    if (i !== -1) { records[i].x = x; records[i].y = y; updates[id + "/x"] = x; updates[id + "/y"] = y; }
+    setTimeout(()=>{ n.style.transition = ""; }, 500);
   });
-  saveData();
-  showToast("付箋をきれいに整列しました。");
+  if (isConnected) recordsRef.update(updates);
+  else saveLocalData();
+  showToast("付箋をきれいに整列しました");
 }
 function toggleFullscreen() {
-  const board = document.getElementById("boardContainer");
+  const b = document.getElementById("boardContainer");
   if (!document.fullscreenElement) {
-    if (board.requestFullscreen) board.requestFullscreen();
-    else if (board.webkitRequestFullscreen) board.webkitRequestFullscreen();
-    else if (board.msRequestFullscreen) board.msRequestFullscreen();
+    if (b.requestFullscreen) b.requestFullscreen();
+    else if (b.webkitRequestFullscreen) b.webkitRequestFullscreen();
     showToast("全画面表示モードを開始しました（Escで戻ります）", "info");
-  } else {
-    if (document.exitFullscreen) document.exitFullscreen();
-  }
+  } else { if (document.exitFullscreen) document.exitFullscreen(); }
 }
-
 function exportBoardPDF() {
-  const board = document.getElementById("boardContainer");
-  const actionButtons = board.querySelectorAll('.sticky-action-buttons');
-  const resizeHandles = board.querySelectorAll('.resize-handle');
-  actionButtons.forEach(b => b.style.display = 'none');
-  resizeHandles.forEach(h => h.style.display = 'none');
-  const notes = board.querySelectorAll('.sticky-note');
+  const b = document.getElementById("boardContainer");
+  const ab = b.querySelectorAll('.sticky-action-buttons');
+  const rh = b.querySelectorAll('.resize-handle');
+  ab.forEach(x => x.style.display = 'none');
+  rh.forEach(x => x.style.display = 'none');
+  const notes = b.querySelectorAll('.sticky-note');
   notes.forEach(n => { n.style.boxShadow = 'none'; n.style.border = '1px solid #cbd5e1'; });
   const opt = {
     margin: 8,
-    filename: `観察記録ボード_${selectedDateTab}_${new Date().toISOString().split('T')[0]}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    filename: "観察記録ボード_" + selectedDateTab + "_" + new Date().toISOString().split('T')[0] + ".pdf",
+    image: { type:'jpeg', quality:0.98 },
+    html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff', scrollX:0, scrollY:0 },
+    jsPDF: { unit:'mm', format:'a4', orientation:'landscape' }
   };
-  showToast("PDFを生成しています。少々お待ちください...", "info");
-  html2pdf().set(opt).from(board).save().then(() => {
-    actionButtons.forEach(b => b.style.display = 'flex');
-    resizeHandles.forEach(h => h.style.display = 'flex');
+  showToast("PDFを生成しています...", "info");
+  html2pdf().set(opt).from(b).save().then(() => {
+    ab.forEach(x => x.style.display = 'flex');
+    rh.forEach(x => x.style.display = 'flex');
     notes.forEach(n => { n.style.boxShadow = ''; n.style.border = ''; });
-    showToast("PDFの出力が完了しました。");
+    showToast("PDF出力が完了しました");
   }).catch(() => {
-    actionButtons.forEach(b => b.style.display = 'flex');
-    resizeHandles.forEach(h => h.style.display = 'flex');
+    ab.forEach(x => x.style.display = 'flex');
+    rh.forEach(x => x.style.display = 'flex');
     notes.forEach(n => { n.style.boxShadow = ''; n.style.border = ''; });
-    showToast("PDF生成中にエラーが発生しました。", "error");
+    showToast("PDF生成中にエラーが発生しました", "error");
   });
 }
 
+// ===== Render Board =====
 function renderBoards() {
   const board = document.getElementById("boardContainer");
   if (!board) return;
   const fs = document.getElementById("filterStudent").value;
-  const sv = document.getElementById("filterSearch").value.trim().toLowerCase();
+  const fSearch = document.getElementById("filterSearch").value.trim().toLowerCase();
   const filtered = records.filter(rec => {
-    const matchStudent = fs ? rec.studentId === fs : true;
-    let matchSearch = true;
-    if (sv) {
+    const ms = fs ? rec.studentId === fs : true;
+    let mq = true;
+    if (fSearch) {
       const st = students.find(s => s.id === rec.studentId);
       const sn = st ? st.name.toLowerCase() : "";
-      matchSearch = sn.includes(sv) || rec.activity.toLowerCase().includes(sv)
-        || rec.fact.toLowerCase().includes(sv) || rec.interpretation.toLowerCase().includes(sv);
+      mq = sn.includes(fSearch) || (rec.activity||"").toLowerCase().includes(fSearch) || (rec.fact||"").toLowerCase().includes(fSearch) || (rec.interpretation||"").toLowerCase().includes(fSearch);
     }
-    return matchStudent && matchSearch;
-  }).filter(rec => selectedDateTab === "all" ? true : rec.date === selectedDateTab);
+    return ms && mq;
+  });
+  const finalRecords = filtered.filter(rec => selectedDateTab === "all" ? true : rec.date === selectedDateTab);
   board.innerHTML = "";
-  if (filtered.length === 0) {
+  if (finalRecords.length === 0) {
     board.innerHTML = `<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 text-sm pointer-events-none"><i class="fa-solid fa-note-sticky text-4xl mb-3 opacity-30"></i>該当する記録付箋がありません。<br>上の「新規記録を追加」から記録を投稿してください。</div>`;
-    updateStats(); return;
+    updateStats();
+    return;
   }
-  filtered.forEach((rec, index) => {
+  finalRecords.forEach((rec, idx) => {
     if (rec.x === undefined || rec.y === undefined) {
-      rec.x = 10 + (index * 6) % 55;
-      rec.y = 10 + (index * 8) % 50;
+      rec.x = 10 + (idx*6) % 55;
+      rec.y = 10 + (idx*8) % 50;
     }
-    const w = rec.w || 320, h = rec.h || 280;
+    const width = rec.w || 320;
+    const height = rec.h || 280;
+    const student = students.find(s => s.id === rec.studentId);
+    const studentName = student ? student.name : "(未登録)";
     const card = document.createElement("div");
-    card.id = `note-${rec.id}`;
+    card.id = "note-" + rec.id;
     card.className = "sticky-note absolute bg-white rounded-2xl border border-slate-100 flex flex-col";
-    card.style.left = `${rec.x}%`;
-    card.style.top = `${rec.y}%`;
-    card.style.width = `${w}px`;
-    card.style.height = `${h}px`;
+    card.style.left = rec.x + "%";
+    card.style.top = rec.y + "%";
+    card.style.width = width + "px";
+    card.style.height = height + "px";
     card.style.zIndex = "10";
-    card.addEventListener('mousedown', (e) => startDrag(e, `note-${rec.id}`));
-    card.addEventListener('touchstart', (e) => startDrag(e, `note-${rec.id}`), { passive: false });
-    card.innerHTML = `
-      <div class="h-5 bg-gradient-to-r from-lime-100 to-emerald-100 border-b border-lime-200/50 flex items-center justify-center cursor-grab active:cursor-grabbing select-none flex-shrink-0">
-        <div class="w-12 h-1 bg-slate-300/60 rounded-full"></div>
-      </div>
-      <div class="p-3.5 flex flex-col gap-2.5 flex-grow overflow-hidden">
-        <div class="bg-blue-50/70 p-2.5 rounded-xl border border-blue-100/50 flex-1 flex flex-col min-h-[60px] overflow-hidden">
-          <div class="text-[9px] font-bold text-blue-700 tracking-wider mb-1 flex items-center gap-1 select-none flex-shrink-0"><i class="fa-solid fa-magnifying-glass"></i> 事実 (Fact)</div>
-          <p class="text-slate-700 text-xs leading-relaxed handwritten font-medium whitespace-pre-wrap flex-grow overflow-y-auto pr-1">${escapeHtml(rec.fact)}</p>
-        </div>
-        <div class="bg-amber-50/70 p-2.5 rounded-xl border border-amber-100/50 flex-1 flex flex-col min-h-[60px] overflow-hidden">
-          <div class="text-[9px] font-bold text-amber-700 tracking-wider mb-1 flex items-center gap-1 select-none flex-shrink-0"><i class="fa-solid fa-lightbulb"></i> 指導員の解釈 (Interpretation)</div>
-          <p class="text-slate-700 text-xs leading-relaxed handwritten font-medium whitespace-pre-wrap flex-grow overflow-y-auto pr-1">${escapeHtml(rec.interpretation)}</p>
-        </div>
-        <div class="flex items-center justify-end mt-1 pt-1.5 border-t border-slate-100 text-[10px] text-slate-400 flex-shrink-0">
-          <div class="flex items-center gap-1 sticky-action-buttons select-none">
-            <button onclick="openEditRecord('${rec.id}')" title="編集する" class="text-slate-400 hover:text-slate-700 p-1 rounded transition"><i class="fa-solid fa-pen text-xs"></i></button>
-            <button onclick="deleteRecordWithConfirm('${rec.id}')" title="削除する" class="text-slate-400 hover:text-red-600 p-1 rounded transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
-          </div>
-        </div>
-      </div>
-      <div class="resize-handle absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 z-30 select-none" onmousedown="startResize(event, 'note-${rec.id}')" ontouchstart="startResize(event, 'note-${rec.id}')">
-        <svg class="w-3 h-3 text-slate-300 hover:text-slate-500 transition pointer-events-none" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <line x1="2" y1="8" x2="8" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <line x1="5" y1="8" x2="8" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-      </div>`;
+    card.addEventListener('mousedown', (e) => startDrag(e, "note-"+rec.id));
+    card.addEventListener('touchstart', (e) => startDrag(e, "note-"+rec.id), { passive:false });
+    card.innerHTML = `<br>      <div class="h-6 bg-gradient-to-r from-lime-100 to-emerald-100 border-b border-lime-200/50 flex items-center justify-between px-2.5 cursor-grab active:cursor-grabbing select-none flex-shrink-0"><br>        <span class="text-[10px] font-bold text-emerald-700 truncate"><i class="fa-solid fa-user-graduate mr-1"></i>${escapeHtml(studentName)}</span><br>        <span class="text-[10px] text-emerald-600 font-semibold flex-shrink-0 ml-2">${formatDateLabel(rec.date)}</span><br>      </div><br>      <div class="px-3 pt-2 pb-1 text-[10px] text-slate-500 font-medium truncate flex-shrink-0">${escapeHtml(rec.activity || "")}</div><br>      <div class="px-3 pb-3 flex flex-col gap-2 flex-grow overflow-hidden"><br>        <div class="bg-blue-50/70 p-2.5 rounded-xl border border-blue-100/50 flex-1 flex flex-col min-h-[60px] overflow-hidden"><br>          <div class="text-[9px] font-bold text-blue-700 tracking-wider mb-1 flex items-center gap-1 select-none flex-shrink-0"><i class="fa-solid fa-magnifying-glass"></i> 事実 (Fact)</div><br>          <p class="text-slate-700 text-xs leading-relaxed handwritten font-medium whitespace-pre-wrap flex-grow overflow-y-auto pr-1">${escapeHtml(rec.fact)}</p><br>        </div><br>        <div class="bg-amber-50/70 p-2.5 rounded-xl border border-amber-100/50 flex-1 flex flex-col min-h-[60px] overflow-hidden"><br>          <div class="text-[9px] font-bold text-amber-700 tracking-wider mb-1 flex items-center gap-1 select-none flex-shrink-0"><i class="fa-solid fa-lightbulb"></i> 指導員の解釈 (Interpretation)</div><br>          <p class="text-slate-700 text-xs leading-relaxed handwritten font-medium whitespace-pre-wrap flex-grow overflow-y-auto pr-1">${escapeHtml(rec.interpretation)}</p><br>        </div><br>        <div class="flex items-center justify-end pt-1 border-t border-slate-100 text-[10px] text-slate-400 flex-shrink-0"><br>          <div class="flex items-center gap-1 sticky-action-buttons select-none"><br>            <button onclick="openEditRecord('${rec.id}')" title="編集" class="text-slate-400 hover:text-slate-700 p-1 rounded transition"><i class="fa-solid fa-pen text-xs"></i></button><br>            <button onclick="deleteRecordWithConfirm('${rec.id}')" title="削除" class="text-slate-400 hover:text-red-600 p-1 rounded transition"><i class="fa-solid fa-trash-can text-xs"></i></button><br>          </div><br>        </div><br>      </div><br>      <div class="resize-handle absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 z-30 select-none" onmousedown="startResize(event, 'note-${rec.id}')" ontouchstart="startResize(event, 'note-${rec.id}')"><br>        <svg class="w-3 h-3 text-slate-300 hover:text-slate-500 transition pointer-events-none" viewBox="0 0 10 10" fill="none"><line x1="2" y1="8" x2="8" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="8" x2="8" y2="5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><br>      </div>`;
     board.appendChild(card);
   });
   updateStats();
 }
 function updateStats() {
   const fs = document.getElementById("filterStudent").value;
-  const sv = document.getElementById("filterSearch").value.trim().toLowerCase();
+  const fSearch = document.getElementById("filterSearch").value.trim().toLowerCase();
   const filtered = records.filter(rec => {
     const ms = fs ? rec.studentId === fs : true;
-    let mse = true;
-    if (sv) {
+    let mq = true;
+    if (fSearch) {
       const st = students.find(s => s.id === rec.studentId);
       const sn = st ? st.name.toLowerCase() : "";
-      mse = sn.includes(sv) || rec.activity.toLowerCase().includes(sv)
-        || rec.fact.toLowerCase().includes(sv) || rec.interpretation.toLowerCase().includes(sv);
+      mq = sn.includes(fSearch) || (rec.activity||"").toLowerCase().includes(fSearch) || (rec.fact||"").toLowerCase().includes(fSearch) || (rec.interpretation||"").toLowerCase().includes(fSearch);
     }
     const md = selectedDateTab === "all" ? true : rec.date === selectedDateTab;
-    return ms && mse && md;
+    return ms && mq && md;
   });
   document.getElementById("statsCount").innerText = filtered.length;
 }
 function applyFilters() { renderBoards(); }
 
+// ===== CRUD =====
 function handleFormSubmit(e) {
   e.preventDefault();
   const studentId = document.getElementById("formStudent").value;
@@ -731,31 +646,32 @@ function handleFormSubmit(e) {
   const activity = document.getElementById("formActivity").value.trim();
   const fact = document.getElementById("formFact").value.trim();
   const interpretation = document.getElementById("formInterpretation").value.trim();
-  if (!studentId || !date || !fact || !interpretation) { showToast("必須項目を入力してください。", "error"); return; }
-  records.push({
-    id: "rec-" + Date.now(),
+  if (!studentId || !date || !fact || !interpretation) { showToast("必須項目を入力してください", "error"); return; }
+  const newRecord = {
+    id: "rec-" + Date.now() + "-" + Math.random().toString(36).slice(2,7),
     studentId, date,
     activity: activity || "通常活動",
     fact, interpretation,
-    x: 25 + Math.random() * 20,
-    y: 20 + Math.random() * 20,
+    x: 25 + Math.random()*20, y: 20 + Math.random()*20,
     w: 320, h: 280
-  });
-  saveData();
+  };
+  if (!isConnected) records.push(newRecord);
+  writeRecord(newRecord);
   selectedDateTab = date;
-  renderDateTabs();
-  renderBoards();
+  if (!isConnected) { renderDateTabs(); renderBoards(); }
   closeRecordModal();
   document.getElementById("formActivity").value = "";
   document.getElementById("formFact").value = "";
   document.getElementById("formInterpretation").value = "";
-  showToast("ボードに新しい付箋を貼りました！");
+  showToast("ボードに付箋を貼りました");
 }
 async function deleteRecordWithConfirm(recordId) {
-  if (await showCustomConfirm("この観察記録（事実と解釈の一体型付箋）を削除してもよろしいですか？", true)) {
-    records = records.filter(r => r.id !== recordId);
-    saveData(); renderDateTabs(); renderBoards();
-    showToast("付箋を削除しました。");
+  const ok = await showCustomConfirm("この観察記録を削除してもよろしいですか？", true);
+  if (ok) {
+    if (!isConnected) records = records.filter(r => r.id !== recordId);
+    deleteRecordRemote(recordId);
+    if (!isConnected) { renderDateTabs(); renderBoards(); }
+    showToast("付箋を削除しました");
   }
 }
 function openEditRecord(recordId) {
@@ -764,7 +680,7 @@ function openEditRecord(recordId) {
   document.getElementById("editRecordId").value = rec.id;
   document.getElementById("editStudent").value = rec.studentId;
   document.getElementById("editDate").value = rec.date;
-  document.getElementById("editActivity").value = rec.activity;
+  document.getElementById("editActivity").value = rec.activity || "";
   document.getElementById("editFact").value = rec.fact;
   document.getElementById("editInterpretation").value = rec.interpretation;
   document.getElementById("editModal").classList.remove("hidden");
@@ -785,12 +701,14 @@ function handleEditSubmit(e) {
   records[i].activity = document.getElementById("editActivity").value.trim();
   records[i].fact = document.getElementById("editFact").value.trim();
   records[i].interpretation = document.getElementById("editInterpretation").value.trim();
-  saveData();
+  writeRecord(records[i]);
   selectedDateTab = newDate;
-  renderDateTabs(); renderBoards(); closeEditModal();
-  showToast("記録を更新しました。");
+  if (!isConnected) { renderDateTabs(); renderBoards(); }
+  closeEditModal();
+  showToast("記録を更新しました");
 }
 
+// ===== Students =====
 function openStudentModal() {
   renderStudentList();
   document.getElementById("studentModal").classList.remove("hidden");
@@ -801,18 +719,18 @@ function closeStudentModal() {
   document.getElementById("studentModal").classList.add("hidden");
 }
 function renderStudentList() {
-  const container = document.getElementById("studentList");
-  container.innerHTML = "";
+  const list = document.getElementById("studentList");
+  list.innerHTML = "";
   if (students.length === 0) {
-    container.innerHTML = `<li class="p-4 text-center text-slate-400 text-xs">登録されている生徒はいません。</li>`;
+    list.innerHTML = `<li class="p-4 text-center text-slate-400 text-xs">登録されている生徒はいません。</li>`;
     return;
   }
-  students.forEach(student => {
-    const count = records.filter(r => r.studentId === student.id).length;
+  students.forEach(st => {
+    const count = records.filter(r => r.studentId === st.id).length;
     const li = document.createElement("li");
     li.className = "flex items-center justify-between p-3 hover:bg-slate-50 transition text-sm";
-    li.innerHTML = `<div class="flex items-center gap-2"><i class="fa-solid fa-graduation-cap text-slate-400 text-xs"></i><span class="font-medium text-slate-700">${escapeHtml(student.name)}</span><span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full font-bold">記録 ${count}件</span></div><button onclick="deleteStudentWithConfirm('${student.id}')" class="text-slate-400 hover:text-red-500 p-1.5 transition" title="削除"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
-    container.appendChild(li);
+    li.innerHTML = `<br>      <div class="flex items-center gap-2"><br>        <i class="fa-solid fa-graduation-cap text-slate-400 text-xs"></i><br>        <span class="font-medium text-slate-700">${escapeHtml(st.name)}</span><br>        <span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full font-bold">記録 ${count}件</span><br>      </div><br>      <button onclick="deleteStudentWithConfirm('${st.id}')" class="text-slate-400 hover:text-red-500 p-1.5 transition" title="削除"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
+    list.appendChild(li);
   });
 }
 function addStudent(e) {
@@ -820,45 +738,51 @@ function addStudent(e) {
   const input = document.getElementById("newStudentName");
   const name = input.value.trim();
   if (!name) return;
-  students.push({ id: "s-" + Date.now(), name });
-  saveData();
+  const newStudent = { id: "s-" + Date.now() + "-" + Math.random().toString(36).slice(2,7), name };
+  if (!isConnected) students.push(newStudent);
+  writeStudent(newStudent);
   input.value = "";
-  renderStudentList();
-  updateStudentDropdowns();
-  showToast(`${name} さんを名簿に追加しました。`);
+  if (!isConnected) { renderStudentList(); updateStudentDropdowns(); }
+  showToast(name + " さんを名簿に追加しました");
 }
 async function deleteStudentWithConfirm(studentId) {
-  const student = students.find(s => s.id === studentId);
-  if (!student) return;
-  const count = records.filter(r => r.studentId === studentId).length;
-  let msg = `本当に「${student.name}」さんを名簿から削除しますか？`;
-  if (count > 0) msg += `\n\n⚠️ 警告: この生徒に関連する観察記録が ${count} 件あります。同時にすべて削除されます！`;
-  if (await showCustomConfirm(msg, true)) {
-    students = students.filter(s => s.id !== studentId);
-    records = records.filter(r => r.studentId !== studentId);
-    saveData();
-    renderStudentList();
-    updateStudentDropdowns();
-    renderDateTabs();
-    renderBoards();
-    showToast("生徒と関連する記録をすべて削除しました。");
+  const st = students.find(s => s.id === studentId);
+  if (!st) return;
+  const cnt = records.filter(r => r.studentId === studentId).length;
+  let msg = "本当に「" + st.name + "」さんを名簿から削除しますか？";
+  if (cnt > 0) msg += "\n\n⚠️ この生徒の観察記録 " + cnt + " 件も同時に削除されます！";
+  const ok = await showCustomConfirm(msg, true);
+  if (ok) {
+    const associatedIds = records.filter(r => r.studentId === studentId).map(r => r.id);
+    if (!isConnected) {
+      students = students.filter(s => s.id !== studentId);
+      records = records.filter(r => r.studentId !== studentId);
+      saveLocalData();
+      renderStudentList(); updateStudentDropdowns(); renderDateTabs(); renderBoards();
+    } else {
+      studentsRef.child(studentId).remove();
+      associatedIds.forEach(rid => recordsRef.child(rid).remove());
+    }
+    showToast("生徒と関連記録を削除しました");
   }
 }
 
+// ===== Export / Import =====
 function exportCSV() {
-  if (records.length === 0) { showToast("エクスポートするデータがありません。", "error"); return; }
-  let csv = "\ufeff\u8a18録ID,\u65e5\u4ed8,\u5150\u7ae5\u751f\u5f92\u540d,\u6d3b\u52d5\u5834\u9762,\u5ba2\u89b3\u7684\u4e8b\u5b9f(Fact),\u6307\u5c0e\u54e1\u89e3\u91c8(Interpretation)\r\n";
-  const esc = (t) => { if (!t) return '""'; return `"${t.replace(/"/g, '""')}"`; };
+  if (records.length === 0) { showToast("エクスポートするデータがありません", "error"); return; }
+  let csv = "﻿記録ID,日付,児童生徒名,活動場面,客観的事実(Fact),指導員解釈(Interpretation)\r\n";
   records.forEach(rec => {
     const st = students.find(s => s.id === rec.studentId);
-    csv += [esc(rec.id), esc(rec.date), esc(st ? st.name : "不明"), esc(rec.activity), esc(rec.fact), esc(rec.interpretation)].join(",") + "\r\n";
+    const sn = st ? st.name : "不明";
+    const esc = t => '"' + (t||"").toString().replace(/"/g,'""') + '"';
+    csv += [esc(rec.id), esc(rec.date), esc(sn), esc(rec.activity), esc(rec.fact), esc(rec.interpretation)].join(",") + "\r\n";
   });
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.setAttribute("download", `観察記録ボード_${new Date().toISOString().split('T')[0]}.csv`);
+  link.setAttribute("download", "観察記録ボード_" + new Date().toISOString().split('T')[0] + ".csv");
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  showToast("CSVファイルのエクスポートが完了しました。");
+  showToast("CSVファイルをエクスポートしました");
 }
 function openBackupModal() {
   document.getElementById("backupModal").classList.remove("hidden");
@@ -869,56 +793,58 @@ function closeBackupModal() {
   document.getElementById("backupModal").classList.add("hidden");
 }
 function exportDataJSON() {
-  const dataPackage = { students, records, exportedAt: new Date().toISOString() };
-  const blob = new Blob([JSON.stringify(dataPackage, null, 2)], { type: "application/json" });
+  const pkg = { students, records, exportedAt: new Date().toISOString(), boardId };
+  const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: "application/json" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.setAttribute("download", `観察記録ボード_バックアップ_${new Date().toISOString().split('T')[0]}.json`);
+  link.setAttribute("download", "観察記録ボード_バックアップ_" + new Date().toISOString().split('T')[0] + ".json");
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  showToast("バックアップデータを保存しました。");
+  showToast("バックアップデータを保存しました");
 }
 function importDataJSON() {
-  const fileInput = document.getElementById("importFile");
-  if (!fileInput.files || fileInput.files.length === 0) { showToast("読み込むファイルを選択してください。", "error"); return; }
+  const fi = document.getElementById("importFile");
+  if (!fi.files || fi.files.length === 0) { showToast("読み込むファイルを選択してください", "error"); return; }
   const reader = new FileReader();
   reader.onload = async function(e) {
     try {
       const imported = JSON.parse(e.target.result);
       if (!imported.students || !imported.records) throw new Error("フォーマット不正");
-      if (await showCustomConfirm("本当にデータをインポートしますか？現在のデータはすべて上書きされます。", true)) {
+      const ok = await showCustomConfirm("本当にデータをインポートしますか？現在のデータは上書きされます。", true);
+      if (ok) {
         students = imported.students;
         records = imported.records;
-        saveData();
+        if (isConnected) {
+          bulkWriteStudents(students);
+          bulkWriteRecords(records);
+        } else {
+          saveLocalData();
+        }
         selectedDateTab = "all";
-        updateStudentDropdowns();
-        renderDateTabs();
-        renderBoards();
-        updateStats();
+        if (!isConnected) { updateStudentDropdowns(); renderDateTabs(); renderBoards(); updateStats(); }
         closeBackupModal();
-        showToast("データのインポートに成功しました！");
+        showToast("データのインポートに成功しました");
       }
-    } catch (err) {
-      showToast("解析失敗。正しいJSONファイルかご確認ください。", "error");
+    } catch(err) {
+      showToast("解析失敗。正しいJSONファイルか確認してください", "error");
     }
   };
-  reader.readAsText(fileInput.files[0]);
+  reader.readAsText(fi.files[0]);
 }
 async function clearAllDataWithConfirm() {
-  const msg = "⚠️ 警告：すべての記録と生徒名簿を完全に消去します。よろしいですか？\n(消去後、ページを再読み込みすると初期デモデータが読み込まれます)";
-  if (await showCustomConfirm(msg, true)) {
-    students = []; records = []; saveData();
+  const msg = "⚠️ 全ての記録と生徒名簿を完全に消去します。よろしいですか？" + (isConnected ? "\n\n（接続中のボード「" + boardId + "」の全データが削除されます）" : "");
+  const ok = await showCustomConfirm(msg, true);
+  if (ok) {
+    students = []; records = [];
+    if (isConnected) {
+      await studentsRef.remove();
+      await recordsRef.remove();
+    } else {
+      saveLocalData();
+    }
     selectedDateTab = "all";
-    updateStudentDropdowns();
-    renderDateTabs();
-    renderBoards();
-    updateStats();
-    showToast("すべてのデータを消去しました。", "info");
+    if (!isConnected) { updateStudentDropdowns(); renderDateTabs(); renderBoards(); updateStats(); }
+    showToast("すべてのデータを消去しました", "info");
   }
-}
-
-function escapeHtml(s) {
-  if (typeof s !== 'string') return s;
-  return s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 </script>
 </body>
