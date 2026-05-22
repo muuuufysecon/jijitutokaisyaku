@@ -159,7 +159,23 @@
                             iceServers: [
                                 { urls: 'stun:stun.l.google.com:19302' },
                                 { urls: 'stun:stun1.l.google.com:19302' },
-                                { urls: 'stun:global.stun.twilio.com:3478' }
+                                { urls: 'stun:global.stun.twilio.com:3478' },
+                                // 無料公開TURNサーバー（P2Pがブロックされる環境で中継接続する）
+                                {
+                                    urls: 'turn:openrelay.metered.ca:80',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                {
+                                    urls: 'turn:openrelay.metered.ca:443',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                },
+                                {
+                                    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                                    username: 'openrelayproject',
+                                    credential: 'openrelayproject'
+                                }
                             ]
                         }
                     }
@@ -189,6 +205,12 @@
                 });
 
                 yNotes.observeDeep(() => render());
+
+                // 自分の awareness state を明示的に設定（他クライアントから可視化される）
+                provider.awareness.setLocalState({
+                    user: { name: 'User-' + Math.floor(Math.random() * 1000), joinedAt: Date.now() }
+                });
+
                 addBtn.disabled = false;
                 statusEl.textContent = '✅ ルーム「' + room + '」に参加';
                 render();
